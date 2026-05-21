@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+build
+dist
+.env*
+public
+*.md
+import_screens.mjs
+fix.js
