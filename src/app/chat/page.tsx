@@ -143,7 +143,7 @@ export default function Page() {
             <textarea
               className="font-body-ui text-body-ui text-text-primary placeholder-text-muted max-h-[120px] min-h-[34px] w-full resize-none border-none bg-transparent py-2 focus:ring-0"
               placeholder="Ask a follow-up question..."
-              rows="1"
+              rows={1}
               style={{ scrollbarWidth: 'thin', scrollbarColor: '#38342d transparent' }}
             ></textarea>
             <button className="bg-primary text-on-primary hover:bg-gold-hover flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-lg transition-colors">

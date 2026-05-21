@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { DM_Sans, Playfair_Display, JetBrains_Mono } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
+import QueryProvider from '@/providers/QueryProvider';
 import './globals.css';
 
 const dmSans = DM_Sans({
@@ -51,7 +53,9 @@ export default function RootLayout({
         className="bg-bg-primary text-text-primary flex min-h-full flex-col overflow-x-hidden"
         suppressHydrationWarning
       >
-        {children}
+        <ClerkProvider>
+          <QueryProvider>{children}</QueryProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

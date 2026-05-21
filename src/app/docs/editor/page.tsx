@@ -108,7 +108,7 @@ export default function Page() {
               </button>
               <button
                 className="text-text-disabled flex h-8 w-8 items-center justify-center rounded"
-                disabled=""
+                disabled={true}
                 title="Redo"
               >
                 <span className="material-symbols-outlined text-[18px]">redo</span>
@@ -293,7 +293,7 @@ export default function Page() {
               />
               <button
                 className="text-text-muted hover:bg-surface-container rounded p-1"
-                disabled=""
+                disabled={true}
               >
                 <span className="material-symbols-outlined text-[16px]">content_copy</span>
               </button>

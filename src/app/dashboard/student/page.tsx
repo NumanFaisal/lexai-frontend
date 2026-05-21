@@ -190,7 +190,7 @@ export default function Page() {
               <textarea
                 className="font-body-ui text-body-ui text-text-primary placeholder-text-muted max-h-[120px] flex-1 resize-none border-none bg-transparent px-2 py-3 outline-none"
                 placeholder="Ask any case law question..."
-                rows="1"
+                rows={1}
               ></textarea>
               <button className="bg-tertiary text-on-tertiary-container hover:bg-tertiary-fixed-dim mb-1 rounded-lg p-2 shadow-sm transition-colors">
                 <span

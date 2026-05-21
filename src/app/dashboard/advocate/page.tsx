@@ -258,7 +258,7 @@ export default function Page() {
                 <textarea
                   className="text-text-primary font-body-ui text-body-ui placeholder:text-text-muted max-h-[200px] min-h-[56px] w-full resize-none border-none bg-transparent px-3 py-2 leading-relaxed focus:ring-0"
                   placeholder="Ask any legal question in Hindi or English..."
-                  rows="2"
+                  rows={2}
                 ></textarea>
               </div>
               <div className="border-border-default/50 mt-1 flex items-center justify-between border-t px-2 pt-2">
