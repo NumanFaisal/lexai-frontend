@@ -1,22 +1,24 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
-type Persona = 'ADVOCATE' | 'BUSINESS' | 'STUDENT';
+const getCookie = (name: string): string | null => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+};
 
 export default function AuthCallbackPage() {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const syncAttempted = useRef(false);
 
   useEffect(() => {
-    if (!isLoaded) return;
-
-    if (!isSignedIn) {
+    const token = getCookie('token');
+    if (!token) {
       router.push('/auth/login');
       return;
     }
@@ -26,63 +28,23 @@ export default function AuthCallbackPage() {
 
     const handleCallback = async () => {
       try {
-        const token = await getToken();
-        if (!token) {
-          throw new Error('Authentication token not found');
-        }
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:4000';
 
-        const savedRole = localStorage.getItem('lexai_signup_role') as Persona | null;
-
-        if (savedRole && ['ADVOCATE', 'BUSINESS', 'STUDENT'].includes(savedRole)) {
-          try {
-            await axios.post(
-              `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/onboarding/persona`,
-              { persona: savedRole },
-              {
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
-            localStorage.removeItem('lexai_signup_role');
-            router.push(`/dashboard/${savedRole.toLowerCase()}`);
-          } catch (err: any) {
-            console.error('Failed to save selected role:', err);
-            throw err;
+        const response = await axios.get(
+          `${apiBase}/api/v1/auth/me`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
+        );
+
+        const existingPersona = response.data?.data?.persona;
+        if (existingPersona && ['ADVOCATE', 'BUSINESS', 'STUDENT'].includes(existingPersona)) {
+          router.push(`/dashboard/${existingPersona.toLowerCase()}`);
         } else {
-          try {
-            const response = await axios.get(
-              `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
-
-            const existingPersona = response.data?.data?.persona;
-            if (existingPersona && ['ADVOCATE', 'BUSINESS', 'STUDENT'].includes(existingPersona)) {
-              router.push(`/dashboard/${existingPersona.toLowerCase()}`);
-            } else {
-              // Fallback to ADVOCATE if no role is found on backend
-              await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/onboarding/persona`,
-                { persona: 'ADVOCATE' },
-                {
-                  headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                  },
-                }
-              );
-              router.push('/dashboard/advocate');
-            }
-          } catch (err: any) {
-            console.error('Failed to retrieve user persona:', err);
-            throw err;
-          }
+          // Fallback to ADVOCATE dashboard
+          router.push('/dashboard/advocate');
         }
       } catch (err: any) {
         console.error('Authentication callback error:', err);
@@ -95,7 +57,7 @@ export default function AuthCallbackPage() {
     };
 
     handleCallback();
-  }, [isLoaded, isSignedIn, getToken, router]);
+  }, [router]);
 
   if (error) {
     return (

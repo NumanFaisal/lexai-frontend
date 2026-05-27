@@ -1,5 +1,13 @@
-import { AuthenticateWithRedirectCallback } from '@clerk/nextjs';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function SSOCallback() {
-  return <AuthenticateWithRedirectCallback />;
+  const router = useRouter();
+  useEffect(() => {
+    router.replace('/auth/login');
+  }, [router]);
+
+  return null;
 }

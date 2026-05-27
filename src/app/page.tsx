@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Page() {
   return (
     <>
@@ -6,12 +8,12 @@ export default function Page() {
           <span className="font-logo text-logo text-primary-container tracking-tighter">LexAI</span>
         </div>
         <div className="gap-standard flex items-center">
-          <button className="font-sub-heading text-sub-heading text-text-secondary hover:text-primary-container focus:ring-gold-border rounded-DEFAULT px-2 py-1 transition-colors outline-none focus:ring-1">
+          <Link href="/auth/login" className="font-sub-heading text-sub-heading text-text-secondary hover:text-primary-container focus:ring-gold-border rounded-DEFAULT px-2 py-1 transition-colors outline-none focus:ring-1">
             Log In
-          </button>
-          <button className="bg-primary-container text-on-primary font-sub-heading text-sub-heading hover:bg-gold-hover focus:ring-gold-border rounded-[10px] px-4 py-1.5 transition-colors outline-none focus:ring-1">
+          </Link>
+          <Link href="/auth/signup" className="bg-primary-container text-on-primary font-sub-heading text-sub-heading hover:bg-gold-hover focus:ring-gold-border rounded-[10px] px-4 py-1.5 transition-colors outline-none focus:ring-1">
             Sign Up
-          </button>
+          </Link>
         </div>
       </header>
       <main>
@@ -32,9 +34,9 @@ export default function Page() {
               </p>
             </div>
             <div className="gap-standard flex flex-col items-center sm:flex-row">
-              <button className="bg-primary-container text-on-primary font-sub-heading text-sub-heading hover:bg-gold-hover focus:ring-gold-border w-full rounded-[10px] px-8 py-3 transition-colors outline-none focus:ring-1 sm:w-auto">
+              <Link href="/auth/signup" className="bg-primary-container text-on-primary font-sub-heading text-sub-heading hover:bg-gold-hover focus:ring-gold-border w-full rounded-[10px] px-8 py-3 transition-colors outline-none focus:ring-1 sm:w-auto text-center">
                 Try Free — No Credit Card
-              </button>
+              </Link>
               <button className="border-border-default text-text-primary font-sub-heading text-sub-heading hover:border-primary-container hover:text-primary-container focus:ring-gold-border w-full rounded-[10px] border bg-transparent px-8 py-3 transition-colors outline-none focus:ring-1 sm:w-auto">
                 See How It Works
               </button>

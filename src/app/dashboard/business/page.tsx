@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 export default function Page() {
   return (
@@ -100,6 +102,16 @@ export default function Page() {
             <span className="material-symbols-outlined text-[18px]">settings</span>
             Settings
           </a>
+          <button
+            onClick={() => {
+              document.cookie = "token=; path=/; max-age=0";
+              window.location.href = "/auth/login";
+            }}
+            className="text-text-muted hover:text-error flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-[#1A1A1D] cursor-pointer text-left w-full"
+          >
+            <span className="material-symbols-outlined text-[18px]">logout</span>
+            Log Out
+          </button>
         </div>
       </nav>
 

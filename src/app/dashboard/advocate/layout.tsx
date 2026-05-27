@@ -1,17 +1,18 @@
-import { auth } from '@clerk/nextjs/server';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import axios from 'axios';
 
 export default async function AdvocateLayout({ children }: { children: React.ReactNode }) {
-  const authObj = await auth();
-  const token = await authObj.getToken();
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token')?.value;
 
   if (!token) {
     redirect('/auth/login');
   }
 
   try {
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:4000';
+    const response = await axios.get(`${apiBase}/api/v1/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 

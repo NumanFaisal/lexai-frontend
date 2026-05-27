@@ -1,3 +1,4 @@
+'use client';
 import Link from 'next/link';
 export default function Page() {
   return (
@@ -83,6 +84,17 @@ export default function Page() {
             </span>
             <span className="font-sub-heading text-sub-heading">Settings</span>
           </a>
+          <button
+            onClick={() => {
+              document.cookie = "token=; path=/; max-age=0";
+              window.location.href = "/auth/login";
+            }}
+            className="font-sub-heading text-sub-heading flex items-center gap-3 rounded-lg px-3 py-2 text-gray-500 transition-all duration-200 hover:bg-[#1A1A1D] hover:text-error cursor-pointer text-left w-full"
+          >
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>logout</span>
+            <span>Log Out</span>
+          </button>
+
         </div>
       </aside>
 
