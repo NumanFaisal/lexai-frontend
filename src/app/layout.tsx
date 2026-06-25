@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import { DM_Sans, Playfair_Display, JetBrains_Mono } from 'next/font/google';
-import QueryProvider from '@/providers/QueryProvider';
+import AppProviders from '@/providers/AppProviders';
 import './globals.css';
 
 const dmSans = DM_Sans({
   variable: '--font-dm-sans',
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
+  weight: ['300', '400', '500', '600'],
 });
 
 const playfairDisplay = Playfair_Display({
@@ -22,8 +22,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'LexAI - Legal Intelligence',
-  description: 'AI Legal Assistant for India',
+  title: 'LexAI — AI Legal Assistant for India',
+  description:
+    'AI-powered legal research, contract drafting, compliance analysis, and case analysis for Indian law. Built for advocates, businesses, and law students.',
 };
 
 export default function RootLayout({
@@ -34,25 +35,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${dmSans.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable} dark h-full antialiased`}
+      className={`${dmSans.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable} dark h-full`}
       suppressHydrationWarning
     >
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL,GRAD,opsz@400,0..1,0,24&display=block"
-          rel="stylesheet"
-        />
-        <style>{`
-          .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-          }
-        `}</style>
-      </head>
-      <body
-        className="bg-bg-primary text-text-primary flex min-h-full flex-col overflow-x-hidden"
-        suppressHydrationWarning
-      >
-        <QueryProvider>{children}</QueryProvider>
+      <body className="flex min-h-full flex-col overflow-x-hidden bg-bg-primary text-text-primary">
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

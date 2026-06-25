@@ -1,0 +1,174 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  MessageSquare,
+  Archive,
+  FileText,
+  Settings,
+  Scale,
+  X,
+} from 'lucide-react';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { setMobileSidebarOpen } from '@/store/slices/uiSlice';
+import { sidebarTransition, backdropTransition } from '@/lib/animations';
+
+const NAV_ITEMS = [
+  { href: '/chat', label: 'Chat', icon: MessageSquare },
+  { href: '/vault', label: 'Vault', icon: Archive },
+  { href: '/documents', label: 'Documents', icon: FileText },
+  { href: '/settings', label: 'Settings', icon: Settings },
+];
+
+function SidebarContent() {
+  const pathname = usePathname();
+  const { user } = useAppSelector((s) => s.auth);
+  const dispatch = useAppDispatch();
+
+  const closeMobile = () => dispatch(setMobileSidebarOpen(false));
+
+  return (
+    <div className="flex h-full flex-col bg-[#0D0D0F] border-r border-[#1A1A1D]">
+      {/* Logo */}
+      <div className="flex items-center gap-3 px-[18px] pt-5 pb-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gold to-[#8B6914]">
+          <Scale className="h-4 w-4 text-white" strokeWidth={1.5} />
+        </div>
+        <div>
+          <h1 className="font-serif text-[18px] font-bold leading-none text-text-primary">
+            LexAI
+          </h1>
+          <p className="mt-0.5 text-[9px] font-medium uppercase tracking-[1.5px] text-text-muted">
+            Indian Law · AI
+          </p>
+        </div>
+        {/* Mobile close */}
+        <button
+          onClick={closeMobile}
+          className="ml-auto lg:hidden rounded-lg p-1.5 text-text-muted hover:bg-bg-tertiary hover:text-text-secondary"
+        >
+          <X size={18} strokeWidth={1.5} />
+        </button>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-2 space-y-1">
+        {NAV_ITEMS.map((item) => {
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.href + '/');
+          const Icon = item.icon;
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={closeMobile}
+              className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors duration-150 ${
+                isActive
+                  ? 'bg-[#C9A84C14] text-gold'
+                  : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
+              }`}
+            >
+              {/* Active left accent */}
+              {isActive && (
+                <motion.div
+                  layoutId="sidebar-active"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-gold"
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                />
+              )}
+              <Icon
+                size={18}
+                strokeWidth={1.5}
+                className={isActive ? 'text-gold' : 'text-text-muted group-hover:text-text-secondary'}
+              />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Query counter */}
+      {user && (
+        <div className="mx-3 mb-3 rounded-lg border border-border-default bg-bg-secondary px-3 py-2.5">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-text-muted">Queries used</span>
+            <span className="font-mono text-text-secondary">
+              {user.queriesUsed}/{user.queriesLimit === 999999 ? '∞' : user.queriesLimit}
+            </span>
+          </div>
+          {user.queriesLimit !== 999999 && (
+            <div className="mt-1.5 h-1 w-full rounded-full bg-bg-tertiary overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gold transition-all duration-300"
+                style={{
+                  width: `${Math.min((user.queriesUsed / user.queriesLimit) * 100, 100)}%`,
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* User info */}
+      {user && (
+        <div className="border-t border-[#1A1A1D] px-[18px] py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-tertiary text-[12px] font-medium text-gold">
+              {user.avatarInitials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-medium text-text-primary">
+                {user.username}
+              </p>
+              <p className="truncate text-[11px] text-text-muted">{user.email}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="border-t border-[#1A1A1D] px-[18px] py-3">
+        <p className="text-[10px] leading-[1.5] text-text-disabled">
+          India&apos;s legal AI assistant. Not a substitute for professional legal
+          counsel.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function Sidebar() {
+  const { mobileSidebarOpen } = useAppSelector((s) => s.ui);
+  const dispatch = useAppDispatch();
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:block w-[240px] flex-shrink-0">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile sidebar overlay */}
+      <AnimatePresence>
+        {mobileSidebarOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+              onClick={() => dispatch(setMobileSidebarOpen(false))}
+              {...backdropTransition}
+            />
+            <motion.aside
+              className="fixed inset-y-0 left-0 z-50 w-[280px] lg:hidden"
+              {...sidebarTransition}
+            >
+              <SidebarContent />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
