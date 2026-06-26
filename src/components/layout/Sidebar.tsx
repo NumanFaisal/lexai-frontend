@@ -1,29 +1,34 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageSquare,
-  Archive,
+  BookOpen,
   FileText,
+  ShieldCheck,
+  Gavel,
   Settings,
-  Scale,
+  HelpCircle,
   X,
+  Scale,
+  Plus,
 } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setMobileSidebarOpen } from '@/store/slices/uiSlice';
+import { clearChat, setActiveMode } from '@/store/slices/chatSlice';
 import { sidebarTransition, backdropTransition } from '@/lib/animations';
 
 const NAV_ITEMS = [
-  { href: '/chat', label: 'Chat', icon: MessageSquare },
-  { href: '/vault', label: 'Vault', icon: Archive },
-  { href: '/documents', label: 'Documents', icon: FileText },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/chat', label: 'Research', icon: BookOpen },
+  { href: '/draft', label: 'Draft', icon: FileText },
+  { href: '/compliance', label: 'Compliance', icon: ShieldCheck },
+  { href: '/case', label: 'Case Analysis', icon: Gavel },
 ];
 
 function SidebarContent() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAppSelector((s) => s.auth);
   const dispatch = useAppDispatch();
 
@@ -37,7 +42,7 @@ function SidebarContent() {
           <Scale className="h-4 w-4 text-white" strokeWidth={1.5} />
         </div>
         <div>
-          <h1 className="font-serif text-[18px] font-bold leading-none text-text-primary">
+          <h1 className="font-serif text-[18px] font-bold leading-none text-text-primary font-serif">
             LexAI
           </h1>
           <p className="mt-0.5 text-[9px] font-medium uppercase tracking-[1.5px] text-text-muted">
@@ -56,8 +61,7 @@ function SidebarContent() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 space-y-1">
         {NAV_ITEMS.map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(item.href + '/');
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           const Icon = item.icon;
 
           return (
@@ -89,6 +93,49 @@ function SidebarContent() {
           );
         })}
       </nav>
+
+      {/* New Research Button */}
+      <div className="px-3 mb-4 shrink-0">
+        <button
+          onClick={() => {
+            dispatch(clearChat());
+            dispatch(setActiveMode('research'));
+            router.push('/chat');
+            closeMobile();
+          }}
+          className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-gold text-[#0a0a0b] font-semibold text-[13px] rounded-lg hover:bg-gold-hover transition-colors shadow-md shadow-gold/10"
+        >
+          <Plus size={16} strokeWidth={2} />
+          New Research
+        </button>
+      </div>
+
+      {/* Settings & Support Links */}
+      <div className="px-3 py-2 border-t border-[#1A1A1D] space-y-1">
+        <Link
+          href="/settings"
+          onClick={closeMobile}
+          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 ${
+            pathname === '/settings'
+              ? 'bg-[#C9A84C14] text-gold'
+              : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
+          }`}
+        >
+          <Settings size={18} strokeWidth={1.5} className={pathname === '/settings' ? 'text-gold' : 'text-text-muted'} />
+          <span>Settings</span>
+        </Link>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            closeMobile();
+          }}
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-bg-tertiary hover:text-text-primary transition-colors duration-150"
+        >
+          <HelpCircle size={18} strokeWidth={1.5} className="text-text-muted" />
+          <span>Support</span>
+        </a>
+      </div>
 
       {/* Query counter */}
       {user && (

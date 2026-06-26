@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Menu, Plus, Settings, CreditCard, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, Plus, Settings, CreditCard, LogOut, ChevronDown, Search, Bell } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { toggleMobileSidebar, setUserMenuOpen } from '@/store/slices/uiSlice';
 import { clearUser } from '@/store/slices/authSlice';
@@ -10,6 +10,7 @@ import { clearChat } from '@/store/slices/chatSlice';
 import { logout } from '@/lib/auth';
 import { MODE_DATA } from '@/lib/mock-data';
 import type { ChatMode } from '@/lib/types';
+import Link from 'next/link';
 
 const ROUTE_TITLES: Record<string, string> = {
   '/chat': 'Chat',
@@ -59,43 +60,87 @@ export default function TopBar() {
   const pageTitle = ROUTE_TITLES[pathname] || 'LexAI';
 
   return (
-    <header className="flex h-[52px] flex-shrink-0 items-center border-b border-border-default bg-bg-secondary px-4">
-      {/* Left: Mobile hamburger + context */}
-      <div className="flex items-center gap-3">
+    <header className="flex h-[56px] flex-shrink-0 items-center justify-between border-b border-border-default bg-bg-secondary px-4">
+      {/* Left: Mobile hamburger + page/mode context */}
+      <div className="flex items-center gap-4 flex-1">
         <button
           onClick={() => dispatch(toggleMobileSidebar())}
-          className="flex h-[30px] w-[30px] items-center justify-center rounded-[7px] border border-border-default lg:hidden hover:bg-bg-tertiary transition-colors"
+          className="flex h-[32px] w-[32px] items-center justify-center rounded-[7px] border border-border-default lg:hidden hover:bg-bg-tertiary transition-colors shrink-0"
         >
           <Menu size={16} strokeWidth={1.5} className="text-text-secondary" />
         </button>
 
-        {pathname === '/chat' ? (
-          <div className="flex items-center gap-2">
-            <span className="text-[16px]">{currentMode?.icon}</span>
-            <span className="text-[13px] font-medium text-text-primary">
-              {currentMode?.label}
-            </span>
-            <div className="mx-2 h-[14px] w-px bg-bg-elevated" />
-            <span className="rounded-full bg-bg-tertiary px-2.5 py-0.5 text-[11px] text-text-muted">
-              Indian Jurisdiction
-            </span>
-          </div>
-        ) : (
-          <h2 className="text-[13px] font-medium text-text-primary">{pageTitle}</h2>
-        )}
+        {/* Search bar */}
+        <div className="relative w-full max-w-[280px] sm:max-w-xs md:max-w-md">
+          <Search size={16} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+          <input
+            type="text"
+            placeholder="Search compliance codes, case files..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const val = e.currentTarget.value.trim();
+                if (val) {
+                  let targetRoute = '/chat';
+                  if (pathname === '/draft') targetRoute = '/draft';
+                  else if (pathname === '/compliance') targetRoute = '/compliance';
+                  else if (pathname === '/case') targetRoute = '/case';
+
+                  router.push(`${targetRoute}?q=${encodeURIComponent(val)}`);
+                  e.currentTarget.value = '';
+                }
+              }
+            }}
+            className="w-full bg-bg-primary border border-border-default rounded-full py-1.5 pl-10 pr-4 text-[12px] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-gold transition-all"
+          />
+        </div>
+
+        {/* Nav links */}
+        <nav className="hidden lg:flex items-center gap-6 ml-4">
+          <Link
+            href="/chat"
+            className="text-text-secondary hover:text-text-primary transition-colors text-[13px] font-medium"
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/vault"
+            className="text-text-secondary hover:text-text-primary transition-colors text-[13px] font-medium"
+          >
+            History
+          </Link>
+          <Link
+            href="/documents"
+            className="text-text-secondary hover:text-text-primary transition-colors text-[13px] font-medium"
+          >
+            Templates
+          </Link>
+        </nav>
       </div>
 
-      {/* Right: Actions + User menu */}
-      <div className="ml-auto flex items-center gap-2">
+      {/* Right: Actions + Upgrade + Notification + User Menu */}
+      <div className="flex items-center gap-3 shrink-0 ml-4">
         {pathname === '/chat' && (
           <button
             onClick={handleNewChat}
-            className="flex items-center gap-1.5 rounded-md border border-border-default px-2.5 py-1 text-[11px] text-text-muted transition-colors hover:border-gold-border hover:text-gold"
+            className="hidden md:flex items-center gap-1.5 rounded-md border border-border-default px-2.5 py-1 text-[11px] text-text-muted transition-colors hover:border-gold-border hover:text-gold"
           >
             <Plus size={14} strokeWidth={1.5} />
             New chat
           </button>
         )}
+
+        <button
+          onClick={() => router.push('/pricing')}
+          className="hidden sm:block px-4 py-1 border border-border-default text-text-primary text-[12px] font-medium rounded-full hover:bg-bg-tertiary active:scale-[0.98] transition-all"
+        >
+          Upgrade
+        </button>
+
+        {/* Notification Bell */}
+        <button className="p-2 text-text-muted hover:text-text-primary transition-colors relative">
+          <Bell size={18} strokeWidth={1.5} />
+          <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-error rounded-full"></span>
+        </button>
 
         {/* User dropdown */}
         <div className="relative" ref={menuRef}>
