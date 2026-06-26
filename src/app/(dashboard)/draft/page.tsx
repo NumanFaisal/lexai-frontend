@@ -30,6 +30,7 @@ import {
 import { MOCK_DOCUMENTS, MODE_DATA } from '@/lib/mock-data';
 import { listItemStagger } from '@/lib/animations';
 import type { Document as DocType } from '@/lib/types';
+import GavelLoader from '@/components/ui/GavelLoader';
 
 function DraftContent() {
   const router = useRouter();
@@ -204,14 +205,10 @@ function DraftContent() {
                 className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-gold px-3 py-1.5 text-[12px] font-medium text-bg-primary disabled:opacity-40"
               >
                 {isGenerating ? (
-                  <>
-                    <Loader2
-                      size={14}
-                      strokeWidth={1.5}
-                      className="animate-spin"
-                    />
-                    Generating...
-                  </>
+                  <div className="flex items-center gap-1.5 justify-center">
+                    <GavelLoader isThinking={true} />
+                    <span>Generating...</span>
+                  </div>
                 ) : (
                   <>
                     <Sparkles size={14} strokeWidth={1.5} />
@@ -303,7 +300,12 @@ function DraftContent() {
                   {activeDoc.title}
                 </h1>
                 <div className="flex items-center gap-1.5 bg-[#1A1A1D] px-2.5 py-1 rounded-full border border-border-default">
-                  {saveStatus === 'saving' || isRevising ? (
+                  {isRevising ? (
+                    <div className="flex items-center gap-1.5">
+                      <GavelLoader isThinking={true} />
+                      <span className="text-[11px] text-text-secondary">Revising...</span>
+                    </div>
+                  ) : saveStatus === 'saving' ? (
                     <>
                       <Loader2 size={12} strokeWidth={1.5} className="animate-spin text-gold" />
                       <span className="text-[11px] text-text-secondary">Saving...</span>
@@ -411,7 +413,14 @@ function DraftContent() {
                   disabled={!revisionQuery.trim() || isRevising}
                   className="px-6 py-3 bg-gold text-[#0A0A0B] rounded-lg text-[13px] font-medium hover:bg-gold-hover active:scale-[0.98] transition-colors whitespace-nowrap disabled:opacity-40 animate-fadeIn"
                 >
-                  {isRevising ? 'Generating...' : 'Generate'}
+                  {isRevising ? (
+                    <div className="flex items-center gap-1.5 justify-center">
+                      <GavelLoader isThinking={true} />
+                      <span>Generating...</span>
+                    </div>
+                  ) : (
+                    'Generate'
+                  )}
                 </button>
               </div>
             </div>

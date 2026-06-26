@@ -32,6 +32,7 @@ import type { ChatMode, ChatMessage } from '@/lib/types';
 import Link from 'next/link';
 import ComplianceDashboard from '@/components/chat/ComplianceDashboard';
 import CaseAnalysisDashboard from '@/components/chat/CaseAnalysisDashboard';
+import GavelLoader from '@/components/ui/GavelLoader';
 
 // ── Secondary Navigation Tabs ──────────────────
 function SecondaryNav({ activeMode }: { activeMode: ChatMode }) {
@@ -168,14 +169,18 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
         {/* Response content */}
         <div className="rounded-[4px_14px_14px_14px] border border-border-default bg-[#141416] px-4 py-3.5">
-          <div
-            className={`prose-chat text-[13px] leading-[1.75] text-[#C8C3B8] ${
-              message.isStreaming ? 'typing-cursor' : ''
-            }`}
-            dangerouslySetInnerHTML={{
-              __html: formatMarkdown(message.content),
-            }}
-          />
+          {message.isStreaming && !message.content ? (
+            <GavelLoader isThinking={true} />
+          ) : (
+            <div
+              className={`prose-chat text-[13px] leading-[1.75] text-[#C8C3B8] ${
+                message.isStreaming ? 'typing-cursor' : ''
+              }`}
+              dangerouslySetInnerHTML={{
+                __html: formatMarkdown(message.content),
+              }}
+            />
+          )}
 
           {/* Citations */}
           {message.citations && message.citations.length > 0 && (
@@ -423,6 +428,9 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
     dispatch(addMessage(assistantMsg));
     dispatch(setIsStreaming(true));
+
+    // Simulate initial AI thinking time (1.2s) to showcase GavelLoader
+    await new Promise((r) => setTimeout(r, 1200));
 
     // Simulate SSE streaming
     const responseText = mode === 'compliance'
