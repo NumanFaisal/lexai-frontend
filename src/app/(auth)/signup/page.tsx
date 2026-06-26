@@ -4,17 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, ArrowRight, ChevronDown } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch } from '@/store';
 import { setUser } from '@/store/slices/authSlice';
-import { registerUser } from '@/lib/auth';
+import { registerUser, authenticateUser } from '@/lib/auth';
 import { pageTransition } from '@/lib/animations';
-
-const PERSONAS = [
-  { value: 'advocate', label: '⚖ Legal Advocate' },
-  { value: 'business', label: '🏢 Business / SME' },
-  { value: 'student', label: '📚 Law Student' },
-];
 
 export default function SignupPage() {
   const router = useRouter();
@@ -23,8 +17,9 @@ export default function SignupPage() {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
+    phone: '',
     password: '',
-    persona: '',
+    persona: 'advocate',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -50,6 +45,7 @@ export default function SignupPage() {
     }
 
     setIsLoading(true);
+    // Simulate network delay
     await new Promise((r) => setTimeout(r, 800));
 
     const result = registerUser({
@@ -69,137 +65,207 @@ export default function SignupPage() {
   };
 
   return (
-    <motion.div {...pageTransition}>
-      <div className="rounded-2xl border border-border-default bg-bg-secondary p-8">
-        <h2 className="font-serif text-2xl font-semibold text-text-primary">
+    <motion.div {...pageTransition} className="space-y-6">
+      {/* Sign Up / Login Switcher Tabs */}
+      <div className="flex gap-8 border-b border-border-default/60 pb-3 mb-6">
+        <Link
+          href="/signup"
+          className="font-serif text-[22px] font-semibold text-gold border-b-2 border-gold pb-3 -mb-[14px]"
+        >
+          Sign Up
+        </Link>
+        <Link
+          href="/login"
+          className="font-serif text-[22px] font-semibold text-text-muted hover:text-text-secondary pb-3 -mb-[14px] transition-colors"
+        >
+          Login
+        </Link>
+      </div>
+
+      <div>
+        <h2 className="font-serif text-[24px] font-semibold text-text-primary">
           Create your account
         </h2>
-        <p className="mt-2 text-[13px] text-text-secondary">
-          Start using AI-powered legal research for India
+        <p className="mt-1 text-[13px] text-text-secondary">
+          Start with 30 free queries. No credit card.
         </p>
+      </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* I am a... (Persona Selector) */}
+        <div>
+          <label className="mb-2 block text-[13px] font-medium text-text-secondary">
+            I am a...
+          </label>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { id: 'advocate', label: 'Advocate' },
+              { id: 'business', label: 'Business' },
+              { id: 'student', label: 'Student' },
+            ].map((role) => {
+              const isActive = formData.persona === role.id;
+              return (
+                <button
+                  key={role.id}
+                  type="button"
+                  onClick={() => updateField('persona', role.id)}
+                  className={`py-2 px-3 rounded-[6px] text-[12px] font-sans font-medium tracking-wide transition-all border ${
+                    isActive
+                      ? 'bg-gold/10 border-gold text-gold font-bold'
+                      : 'bg-bg-secondary border-border-default text-text-secondary hover:border-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  {role.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Inputs */}
+        <div className="space-y-3">
           <div>
-            <label
-              htmlFor="username"
-              className="mb-1.5 block text-[13px] font-medium text-text-secondary"
-            >
-              Full name
-            </label>
             <input
               id="username"
               type="text"
               value={formData.username}
               onChange={(e) => updateField('username', e.target.value)}
-              placeholder="Advocate Sharma"
-              className="w-full rounded-[10px] border border-border-default bg-bg-primary px-4 py-2.5 text-[13px] text-text-primary placeholder:text-text-disabled outline-none transition-colors duration-200 focus:border-gold-border"
+              placeholder="Full Name"
+              className="w-full rounded-[6px] border border-border-default bg-[#0a0a0b] px-4 py-3 text-[13px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus:border-gold-border"
             />
           </div>
 
           <div>
-            <label
-              htmlFor="signup-email"
-              className="mb-1.5 block text-[13px] font-medium text-text-secondary"
-            >
-              Email address
-            </label>
             <input
               id="signup-email"
               type="email"
               value={formData.email}
               onChange={(e) => updateField('email', e.target.value)}
-              placeholder="you@example.com"
-              className="w-full rounded-[10px] border border-border-default bg-bg-primary px-4 py-2.5 text-[13px] text-text-primary placeholder:text-text-disabled outline-none transition-colors duration-200 focus:border-gold-border"
+              placeholder="Email Address"
+              className="w-full rounded-[6px] border border-border-default bg-[#0a0a0b] px-4 py-3 text-[13px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus:border-gold-border"
               autoComplete="email"
             />
           </div>
 
           <div>
-            <label
-              htmlFor="signup-password"
-              className="mb-1.5 block text-[13px] font-medium text-text-secondary"
-            >
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="signup-password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={(e) => updateField('password', e.target.value)}
-                placeholder="At least 6 characters"
-                className="w-full rounded-[10px] border border-border-default bg-bg-primary px-4 py-2.5 pr-10 text-[13px] text-text-primary placeholder:text-text-disabled outline-none transition-colors duration-200 focus:border-gold-border"
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
-              >
-                {showPassword ? (
-                  <EyeOff size={16} strokeWidth={1.5} />
-                ) : (
-                  <Eye size={16} strokeWidth={1.5} />
-                )}
-              </button>
-            </div>
+            <input
+              id="signup-phone"
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^[+0-9\s-]*$/.test(val)) {
+                  updateField('phone', val);
+                }
+              }}
+              placeholder="+91 Phone Number"
+              className="w-full rounded-[6px] border border-border-default bg-[#0a0a0b] px-4 py-3 text-[13px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus:border-gold-border"
+            />
           </div>
 
-          <div>
-            <label
-              htmlFor="persona"
-              className="mb-1.5 block text-[13px] font-medium text-text-secondary"
+          <div className="relative">
+            <input
+              id="signup-password"
+              type={showPassword ? 'text' : 'password'}
+              value={formData.password}
+              onChange={(e) => updateField('password', e.target.value)}
+              placeholder="Password"
+              className="w-full rounded-[6px] border border-border-default bg-[#0a0a0b] px-4 py-3 pr-10 text-[13px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus:border-gold-border"
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
             >
-              I am a... <span className="text-text-muted">(optional)</span>
-            </label>
-            <div className="relative">
-              <select
-                id="persona"
-                value={formData.persona}
-                onChange={(e) => updateField('persona', e.target.value)}
-                className="w-full appearance-none rounded-[10px] border border-border-default bg-bg-primary px-4 py-2.5 pr-10 text-[13px] text-text-primary outline-none transition-colors duration-200 focus:border-gold-border"
-              >
-                <option value="">Select your role</option>
-                {PERSONAS.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={16}
-                strokeWidth={1.5}
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-muted"
-              />
-            </div>
+              {showPassword ? (
+                <EyeOff size={15} strokeWidth={1.5} />
+              ) : (
+                <Eye size={15} strokeWidth={1.5} />
+              )}
+            </button>
           </div>
+        </div>
 
-          {error && (
-            <p className="rounded-lg bg-error/10 px-3 py-2 text-[12px] text-error">
-              {error}
-            </p>
-          )}
+        {error && (
+          <p className="rounded-lg bg-error/10 px-3 py-2 text-[12px] text-error">
+            {error}
+          </p>
+        )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-gold px-5 py-2.5 text-[13px] font-medium text-bg-primary transition-colors duration-200 hover:bg-gold-hover active:scale-[0.98] disabled:opacity-60"
-          >
-            {isLoading ? 'Creating account...' : 'Create Account'}
-            {!isLoading && <ArrowRight size={16} strokeWidth={1.5} />}
-          </button>
-        </form>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-[#c9a84c] hover:bg-[#e8c96a] text-[#0A0A0B] py-3 rounded-[6px] text-[13px] font-bold tracking-wide transition-all duration-200 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+        >
+          {isLoading ? 'Creating account...' : 'Create Account'}
+        </button>
+      </form>
+
+      {/* Or continue with */}
+      <div className="space-y-4">
+        <div className="relative flex py-1 items-center">
+          <div className="flex-grow border-t border-border-default/60"></div>
+          <span className="flex-shrink mx-4 text-text-muted text-[11px] font-mono uppercase tracking-wider">
+            or continue with
+          </span>
+          <div className="flex-grow border-t border-border-default/60"></div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setIsLoading(true);
+            setTimeout(() => {
+              // Log in as advocate demo user
+              const result = authenticateUser('demo@lexai.in', 'password123');
+              if (result.success && result.user) {
+                dispatch(setUser(result.user));
+                router.push('/chat');
+              }
+            }, 800);
+          }}
+          className="w-full flex items-center justify-center gap-3 rounded-[6px] border border-border-default bg-[#0a0a0b] py-3 text-[13px] text-text-primary font-medium hover:bg-bg-secondary hover:border-text-muted transition-colors duration-200 cursor-pointer"
+        >
+          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+            <path
+              fill="#EA4335"
+              d="M5.2662 9.7656C6.1995 6.9776 8.8139 5 11.9014 5C13.6543 5 15.2236 5.625 16.46 6.6478L19.822 3.2858C17.747 1.3544 14.9602 0.25 11.9014 0.25C7.29 0.25 3.3216 2.8711 1.3203 6.7109L5.2662 9.7656Z"
+            />
+            <path
+              fill="#4285F4"
+              d="M23.49 12.275c0-.825-.075-1.62-.21-2.385H11.9v4.515h6.51c-.28 1.485-1.12 2.745-2.38 3.585l3.69 2.865c2.16-1.995 3.77-4.935 3.77-8.58z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.266 14.234c-.24-.72-.376-1.488-.376-2.284s.136-1.564.376-2.284L1.32 5.96C.478 7.66 0 9.56 0 11.55c0 1.99.478 3.89 1.32 5.59l3.946-3.906z"
+            />
+            <path
+              fill="#34A853"
+              d="M11.9 23.75c3.24 0 5.97-1.08 7.96-2.915l-3.69-2.865c-1.02.685-2.33 1.1-4.27 1.1-3.087 0-5.702-1.978-6.635-4.766L1.32 17.21c2.001 3.84 5.97 6.46 10.58 6.46z"
+            />
+          </svg>
+          Google Sign-In
+        </button>
       </div>
 
-      <p className="mt-6 text-center text-[13px] text-text-secondary">
-        Already have an account?{' '}
-        <Link
-          href="/login"
-          className="text-gold underline decoration-dotted underline-offset-2 hover:text-gold-hover"
-        >
-          Sign in
-        </Link>
-      </p>
+      {/* Redirect footer */}
+      <div className="text-center">
+        <p className="text-[13px] text-text-secondary">
+          Already have an account?{' '}
+          <Link
+            href="/login"
+            className="text-gold underline hover:text-gold-hover font-semibold"
+          >
+            Login
+          </Link>
+        </p>
+
+        <p className="mt-4 text-[10px] text-text-muted leading-relaxed max-w-[320px] mx-auto">
+          By registering, you agree to our Terms of Service & Privacy Policy.<br />
+          Compliant with IT Act 2000.
+        </p>
+      </div>
     </motion.div>
   );
 }
