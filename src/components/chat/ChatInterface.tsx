@@ -25,11 +25,13 @@ import {
   MOCK_MESSAGES,
   MOCK_STREAMING_RESPONSE,
   MOCK_COMPLIANCE_RESPONSE,
+  MOCK_CASE_RESPONSE,
 } from '@/lib/mock-data';
 import { listItemStagger } from '@/lib/animations';
 import type { ChatMode, ChatMessage } from '@/lib/types';
 import Link from 'next/link';
 import ComplianceDashboard from '@/components/chat/ComplianceDashboard';
+import CaseAnalysisDashboard from '@/components/chat/CaseAnalysisDashboard';
 
 // ── Secondary Navigation Tabs ──────────────────
 function SecondaryNav({ activeMode }: { activeMode: ChatMode }) {
@@ -120,6 +122,19 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         transition={{ duration: 0.2, ease: 'easeOut' }}
       >
         <ComplianceDashboard />
+      </motion.div>
+    );
+  }
+
+  if (message.role === 'assistant' && message.mode === 'case' && message.content.startsWith('## Legal Case Analysis')) {
+    return (
+      <motion.div
+        className="w-full flex justify-start"
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+      >
+        <CaseAnalysisDashboard />
       </motion.div>
     );
   }
@@ -292,22 +307,36 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   const [retryMessageId, setRetryMessageId] = useState<string | null>(null);
   const lastProcessedQueryRef = useRef<string | null>(null);
 
-  // Sync mode to redux state
+  // Sync page mode and load/clear conversation history based on active route
   useEffect(() => {
     dispatch(setActiveMode(mode));
-  }, [mode, dispatch]);
 
-  // Sync conversation from URL
-  useEffect(() => {
-    const convId = searchParams.get('conversationId');
-    if (convId && convId !== activeConversationId) {
-      dispatch(setActiveConversation(convId));
-      const msgs = MOCK_MESSAGES[convId];
-      if (msgs) {
+    const urlConvId = searchParams.get('conversationId');
+    if (urlConvId) {
+      // URL has a specific conversation ID, load it
+      dispatch(setActiveConversation(urlConvId));
+      const msgs = MOCK_MESSAGES[urlConvId] || [];
+      dispatch(setMessages(msgs));
+      return;
+    }
+
+    // Check if current active conversation in Redux matches this mode.
+    // If it doesn't match, we must load the correct mode's conversation or clear.
+    const activeConv = conversations.find(c => c.id === activeConversationId);
+    if (!activeConv || activeConv.mode !== mode) {
+      const modeConvs = conversations.filter((c) => c.mode === mode);
+      if (modeConvs.length > 0) {
+        // Load the most recent conversation for this mode
+        const latest = modeConvs[0];
+        dispatch(setActiveConversation(latest.id));
+        const msgs = MOCK_MESSAGES[latest.id] || [];
         dispatch(setMessages(msgs));
+      } else {
+        // Clear chat to start empty state
+        dispatch(clearChat());
       }
     }
-  }, [searchParams, dispatch, activeConversationId]);
+  }, [mode, searchParams, conversations, dispatch, activeConversationId]);
 
   // Load conversations list
   useEffect(() => {
@@ -396,7 +425,11 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     dispatch(setIsStreaming(true));
 
     // Simulate SSE streaming
-    const responseText = mode === 'compliance' ? MOCK_COMPLIANCE_RESPONSE : MOCK_STREAMING_RESPONSE;
+    const responseText = mode === 'compliance'
+      ? MOCK_COMPLIANCE_RESPONSE
+      : mode === 'case'
+        ? MOCK_CASE_RESPONSE
+        : MOCK_STREAMING_RESPONSE;
     const words = responseText.split(' ');
     for (let i = 0; i < words.length; i++) {
       await new Promise((r) => setTimeout(r, 20 + Math.random() * 30));
@@ -414,7 +447,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
         id: assistantMsgId,
         updates: {
           isStreaming: false,
-          citations: mode === 'compliance' ? [] : [
+          citations: (mode === 'compliance' || mode === 'case') ? [] : [
             {
               id: `cite_${Date.now()}`,
               text: 'Section 302 IPC',
@@ -472,7 +505,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-6 lg:px-0">
-        <div className={`mx-auto space-y-5 transition-all duration-300 ${mode === 'compliance' ? 'max-w-[1000px]' : 'max-w-[720px]'}`}>
+        <div className={`mx-auto space-y-5 transition-all duration-300 ${mode === 'compliance' || mode === 'case' ? 'max-w-[1000px]' : 'max-w-[720px]'}`}>
           {messages.length === 0 && !isStreaming ? (
             <EmptyState mode={mode} />
           ) : (
@@ -507,7 +540,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
       {/* Input bar */}
       <div className="border-t border-border-default bg-bg-primary px-4 pb-4 pt-3 lg:px-6">
-        <div className={`mx-auto transition-all duration-300 ${mode === 'compliance' ? 'max-w-[1000px]' : 'max-w-[720px]'}`}>
+        <div className={`mx-auto transition-all duration-300 ${mode === 'compliance' || mode === 'case' ? 'max-w-[1000px]' : 'max-w-[720px]'}`}>
           <div
             className={`flex items-end gap-2.5 rounded-[14px] border bg-bg-secondary px-3.5 py-2.5 transition-colors duration-200 ${
               inputValue.trim() ? 'border-gold-border' : 'border-border-default'

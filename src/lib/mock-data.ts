@@ -631,3 +631,7 @@ The Supreme Court in **State of UP v. Krishna Gopal (1988)** held that circumsta
 export const MOCK_COMPLIANCE_RESPONSE = `## COMPLIANCE AUDIT
 Private Limited Company (SaaS) — FY 2025-26
 Based on Companies Act 2013 and GST rules. Last sync with MCA portal: 2 hours ago.`;
+
+export const MOCK_CASE_RESPONSE = `## Legal Case Analysis
+Anticipatory Bail Application — FY 2025-26
+Case evaluation under Sec 438 CrPC and IPC offences. Jurisdiction: Delhi High Court.`;
