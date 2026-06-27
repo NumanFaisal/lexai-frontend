@@ -16,6 +16,7 @@ export default function GavelLoader({ isThinking = true }: GavelLoaderProps) {
         className="gl-svg"
         viewBox="-3 -3 50 50"
         xmlns="http://www.w3.org/2000/svg"
+        role="img"
       >
         <style>{`
           .gl-arm {
