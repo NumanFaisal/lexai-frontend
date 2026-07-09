@@ -9,6 +9,8 @@ import { useAppDispatch } from '@/store';
 import { setUser } from '@/store/slices/authSlice';
 import { authenticateUser } from '@/lib/auth';
 import { pageTransition } from '@/lib/animations';
+import api from '@/lib/axios';
+import { User } from '@/lib/types';
 
 function LoginForm() {
   const router = useRouter();
@@ -32,21 +34,102 @@ function LoginForm() {
     }
 
     setIsLoading(true);
-    // Simulate network delay
-    await new Promise((r) => setTimeout(r, 600));
+    
+    try {
+      const response = await api.post('/auth/signin', {
+        email,
+        password,
+      });
 
-    const result = authenticateUser(email, password);
+      const result = response.data;
 
-    if (result.success && result.user) {
-      dispatch(setUser(result.user));
+      if (result.success) {
+        // Save token
+        localStorage.setItem('token', result.data.token);
 
-      if (!result.user.hasCompletedOnboarding) {
-        router.push('/onboard');
-      } else {
-        router.push(callbackUrl);
+        // 2. ADD THIS LINE for Next.js Middleware
+  document.cookie = `token=${result.data.token}; path=/; max-age=86400; SameSite=Lax`;
+
+        const backendUser = result.data.user;
+
+        // Format user data for redux store 
+        const userForRedux: User = {
+          id: backendUser.id,
+          username: backendUser.name || backendUser.username, 
+          email: backendUser.email,
+          persona: backendUser.persona ? backendUser.persona.toLowerCase() as any : null,
+          plan: 'free' as const,
+          queriesLimit: backendUser.queriesLimit ?? 30,
+          queriesUsed: backendUser.queriesUsed ?? 0,
+          hasCompletedOnboarding: backendUser.hasCompletedOnboarding ?? false,
+          avatarInitials: backendUser.avatarInitials || (backendUser.name || backendUser.username || '')
+            .split(' ')
+            .map((n: string) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2),
+          createdAt: backendUser.createdAt || new Date().toISOString(),
+        };
+
+        // Dispatch to store
+        dispatch(setUser(userForRedux));
+
+        //Redirect routing based on onboarding status
+        if (!userForRedux.hasCompletedOnboarding) {
+          router.push('/onboard');
+        } else {
+          router.push(callbackUrl);
+        }
       }
-    } else {
-      setError(result.error || 'Invalid credentials');
+
+    } catch (err: any) {
+      console.error('Login Error:', err);
+
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Invalid credentials or network error.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+
+  };
+
+  // Helper for the Demo Account button to also use the actual API
+  const handleDemoLogin = async () => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const response = await api.post('/auth/signin', {
+        email: 'demo@lexai.in',
+        password: 'password123',
+      });
+      
+      const result = response.data;
+      if (result.success) {
+        localStorage.setItem('token', result.data.token);
+        const backendUser = result.data.user;
+        const userForRedux: User = {
+          id: backendUser.id,
+          username: backendUser.name || backendUser.username,
+          email: backendUser.email,
+          persona: backendUser.persona ? backendUser.persona.toLowerCase() as any : null,
+          plan: 'free' as const,
+          queriesLimit: backendUser.queriesLimit ?? 30,
+          queriesUsed: backendUser.queriesUsed ?? 0,
+          hasCompletedOnboarding: backendUser.hasCompletedOnboarding ?? false,
+          avatarInitials: backendUser.avatarInitials || 'DE',
+          createdAt: backendUser.createdAt || new Date().toISOString(),
+        };
+        
+        dispatch(setUser(userForRedux));
+        router.push('/chat');
+      }
+    } catch (err: any) {
+      setError('Demo account not found on backend. Please create it first.');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -144,15 +227,7 @@ function LoginForm() {
         <button
           type="button"
           onClick={() => {
-            setIsLoading(true);
-            setTimeout(() => {
-              // Log in as advocate demo user
-              const result = authenticateUser('demo@lexai.in', 'password123');
-              if (result.success && result.user) {
-                dispatch(setUser(result.user));
-                router.push('/chat');
-              }
-            }, 800);
+            console.log('Google Auth Placeholder');
           }}
           className="w-full flex items-center justify-center gap-3 rounded-[6px] border border-border-default bg-[#0a0a0b] py-3 text-[13px] text-text-primary font-medium hover:bg-bg-secondary hover:border-text-muted transition-colors duration-200 cursor-pointer"
         >

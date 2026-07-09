@@ -1,12 +1,15 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import LoadingScreen from '@/components/ui/LoadingScreen';
-import { useAppSelector } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { pageTransition } from '@/lib/animations';
+import api from '@/lib/axios';
+import { useEffect } from 'react';
+import { clearUser, setInitialized, setUser } from '@/store/slices/authSlice';
 
 export default function DashboardLayout({
   children,
@@ -14,16 +17,64 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
   const { isInitialized, isAuthenticated } = useAppSelector((s) => s.auth);
 
-  // Show loading screen during auth hydration
+  // 1. Hydrate the user session on first load
+  useEffect(() => {
+    const hydrateAuth = async () => {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        dispatch(clearUser());
+        router.push('/login');
+        return;
+      }
+
+      try {
+        // Fetch the user data from your backend
+        const response = await api.get('/auth/me');
+        const backendUser = response.data.data;
+
+        // Map it to your Redux state
+        dispatch(setUser({
+          id: backendUser.id,
+          username: backendUser.name,
+          email: backendUser.email,
+          persona: backendUser.persona ? backendUser.persona.toLowerCase() as any : null,
+          plan: 'free' as const,
+          queriesLimit: 30, // Fallbacks
+          queriesUsed: 0,
+          hasCompletedOnboarding: true, 
+          avatarInitials: (backendUser.name || 'U').substring(0, 2).toUpperCase(),
+          createdAt: new Date().toISOString(),
+        }));
+      } catch (error) {
+        console.error('Failed to hydrate session:', error);
+        localStorage.removeItem('token');
+        document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        dispatch(clearUser());
+        router.push('/login');
+      } finally {
+        // Stop the loading screen!
+        dispatch(setInitialized());
+      }
+    };
+
+    if (!isInitialized) {
+      hydrateAuth();
+    }
+  }, [isInitialized, dispatch, router]);
+
+  // 2. Show loading screen during auth hydration
   if (!isInitialized) {
     return <LoadingScreen />;
   }
 
-  // If not authenticated and initialized, proxy should redirect — but guard anyway
+  // 3. Fallback guard
   if (!isAuthenticated) {
-    return <LoadingScreen />;
+    return null; // Will redirect via useEffect
   }
 
   return (

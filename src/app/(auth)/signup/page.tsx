@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
+import api from '../../../lib/axios';
 import { useAppDispatch } from '@/store';
 import { setUser } from '@/store/slices/authSlice';
-import { registerUser, authenticateUser } from '@/lib/auth';
+// import { registerUser, authenticateUser } from '@/lib/auth';
 import { pageTransition } from '@/lib/animations';
+import type { User } from '@/lib/types';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -39,30 +41,68 @@ export default function SignupPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
 
     setIsLoading(true);
-    // Simulate network delay
-    await new Promise((r) => setTimeout(r, 800));
 
-    const result = registerUser({
-      username: formData.username,
-      email: formData.email,
-      password: formData.password,
-      persona: formData.persona || null,
-    });
+    try {
+      const response = await api.post('/auth/signup', {
+        email: formData.email,
+        password: formData.password,
+        username: formData.username,
+        persona: formData.persona.toUpperCase()
+      });
 
-    if (result.success && result.user) {
-      dispatch(setUser(result.user));
-      router.push('/onboard');
-    } else {
-      setError(result.error || 'Registration failed');
+      const result = response.data;
+
+      if (result.success) {
+        localStorage.setItem('token', result.data.token);
+
+        // 2. ADD THIS LINE for Next.js Middleware
+        document.cookie = `token=${result.data.token}; path=/; max-age=86400; SameSite=Lax`;
+
+        const backendUser = result.data.user;
+
+        const userForRedux: User = {
+          id: backendUser.id,
+          username: backendUser.username,
+          email: backendUser.email,
+          persona: backendUser.persona ? backendUser.persona.toLowerCase() as any : null,
+          plan: 'free' as const,
+          queriesLimit: backendUser.queriesLimit ?? 30,
+          queriesUsed: backendUser.queriesUsed ?? 0,
+          hasCompletedOnboarding: backendUser.hasCompletedOnboarding ?? false,
+          avatarInitials: backendUser.avatarInitials || (backendUser.username || '')
+            .split(' ')
+            .map((n: string) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2),
+          createdAt: backendUser.createdAt || new Date().toISOString(),
+        };
+
+        dispatch(setUser(userForRedux));
+        router.push('/onboard');
+      } else {
+        setError(result.message || 'Registration failed');
+      }
+
+    } catch (err: any) {
+      console.error('Signup Error:', err);
+
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Network error. Is the backend server running?');
+      }
+    } finally {
       setIsLoading(false);
     }
   };
+    
 
   return (
     <motion.div {...pageTransition} className="space-y-6">
@@ -215,15 +255,7 @@ export default function SignupPage() {
         <button
           type="button"
           onClick={() => {
-            setIsLoading(true);
-            setTimeout(() => {
-              // Log in as advocate demo user
-              const result = authenticateUser('demo@lexai.in', 'password123');
-              if (result.success && result.user) {
-                dispatch(setUser(result.user));
-                router.push('/chat');
-              }
-            }, 800);
+            console.log("Google Auth Placeholder");
           }}
           className="w-full flex items-center justify-center gap-3 rounded-[6px] border border-border-default bg-[#0a0a0b] py-3 text-[13px] text-text-primary font-medium hover:bg-bg-secondary hover:border-text-muted transition-colors duration-200 cursor-pointer"
         >

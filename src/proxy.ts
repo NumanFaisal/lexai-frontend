@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const AUTH_COOKIE = 'lexai_session';
+const AUTH_COOKIE = 'token';
 
 // Routes that require authentication
 const protectedPaths = ['/chat', '/vault', '/documents', '/settings', '/pricing', '/onboard'];

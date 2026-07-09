@@ -34,7 +34,7 @@ import ComplianceDashboard from '@/components/chat/ComplianceDashboard';
 import CaseAnalysisDashboard from '@/components/chat/CaseAnalysisDashboard';
 import GavelLoader from '@/components/ui/GavelLoader';
 
-// ── Secondary Navigation Tabs ──────────────────
+//  Secondary Navigation Tabs 
 function SecondaryNav({ activeMode }: { activeMode: ChatMode }) {
   const router = useRouter();
 
