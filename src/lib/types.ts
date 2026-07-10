@@ -35,6 +35,14 @@ export interface Citation {
   source: string;
   url?: string;
   verified: boolean;
+
+  // Optional backend fields
+  type?: string;
+  rawText?: string;
+  sectionNum?: string;
+  actName?: string;
+  caseName?: string;
+  kanoonUrl?: string;
 }
 
 export interface Conversation {

@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useRef, useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, RotateCcw, CreditCard } from 'lucide-react';
+import { Send, Mic, RotateCcw, CreditCard, ChevronDown, Check, Brain, Sparkles, Cpu } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import {
   setActiveMode,
@@ -33,6 +33,14 @@ import Link from 'next/link';
 import ComplianceDashboard from '@/components/chat/ComplianceDashboard';
 import CaseAnalysisDashboard from '@/components/chat/CaseAnalysisDashboard';
 import GavelLoader from '@/components/ui/GavelLoader';
+import api from '@/lib/axios';
+
+const MODELS = [
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', short: 'Gemini 2.0', icon: Sparkles, color: 'text-info' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', short: 'Gemini 1.5', icon: Cpu, color: 'text-info' },
+  { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', short: 'Claude 3.5', icon: Brain, color: 'text-gold' },
+  { id: 'gpt-4o', name: 'GPT-4o', short: 'GPT-4o', icon: Cpu, color: 'text-success' },
+];
 
 //  Secondary Navigation Tabs 
 function SecondaryNav({ activeMode }: { activeMode: ChatMode }) {
@@ -69,33 +77,56 @@ function SecondaryNav({ activeMode }: { activeMode: ChatMode }) {
   );
 }
 
-// ── Citation Badge ─────────────────────────────
+//  Citation Badge 
 function CitationBadge({
   citation,
 }: {
   citation: ChatMessage['citations'] extends (infer T)[] | undefined ? T : never;
 }) {
   if (!citation) return null;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-mono text-[11px] leading-[1.3] ${
-        citation.verified
-          ? 'bg-[#C9A84C1A] border border-[#C9A84C4D] text-gold'
-          : 'bg-[#BE7B7B1A] border border-[#BE7B7B66] text-error'
-      }`}
-    >
+
+  const text = citation.text || citation.rawText || citation.caseName || citation.actName || 'Citation';
+  const url = citation.url || citation.kanoonUrl;
+
+  const content = (
+    <>
       <span className={citation.verified ? 'text-success' : 'text-warning'}>
         {citation.verified ? '✓' : '⚠'}
       </span>
-      {citation.text}
-      {citation.url && (
+      {text}
+      {url && (
         <span className="text-text-muted">↗</span>
       )}
+    </>
+  );
+
+  const className = `inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-mono text-[11px] leading-[1.3] transition-colors ${
+    citation.verified
+      ? 'bg-[#C9A84C1A] border border-[#C9A84C4D] text-gold hover:bg-[#C9A84C2D]'
+      : 'bg-[#BE7B7B1A] border border-[#BE7B7B66] text-error hover:bg-[#BE7B7B2D]'
+  }`;
+
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <span className={className}>
+      {content}
     </span>
   );
 }
 
-// ── Message Bubble ─────────────────────────────
+//  Message Bubble 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const mode = MODE_DATA[message.mode];
 
@@ -185,8 +216,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           {/* Citations */}
           {message.citations && message.citations.length > 0 && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {message.citations.map((cite) => (
-                <CitationBadge key={cite.id} citation={cite} />
+              {message.citations.map((cite, index) => (
+                cite ? <CitationBadge key={cite.id || `cite-${index}`} citation={cite} /> : null
               ))}
             </div>
           )}
@@ -224,7 +255,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   );
 }
 
-// ── Empty State ────────────────────────────────
+// Empty State 
 function EmptyState({ mode }: { mode: ChatMode }) {
   const data = MODE_DATA[mode];
   const dispatch = useAppDispatch();
@@ -261,7 +292,7 @@ function EmptyState({ mode }: { mode: ChatMode }) {
   );
 }
 
-// ── Paywall Card ─────────────────────────────
+//  Paywall Card 
 function PaywallCard() {
   return (
     <motion.div
@@ -298,7 +329,7 @@ function PaywallCard() {
   );
 }
 
-// ── Chat Content ───────────────────────────────
+//  Chat Content
 function ChatContent({ mode }: { mode: ChatMode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -311,6 +342,23 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [retryMessageId, setRetryMessageId] = useState<string | null>(null);
   const lastProcessedQueryRef = useRef<string | null>(null);
+
+  const [selectedModel, setSelectedModel] = useState('gemini-2.0-flash');
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setModelDropdownOpen(false);
+      }
+    }
+    if (modelDropdownOpen) {
+      document.addEventListener('mousedown', handleClick);
+      return () => document.removeEventListener('mousedown', handleClick);
+    }
+  }, [modelDropdownOpen]);
 
   // Sync page mode and load/clear conversation history based on active route
   useEffect(() => {
@@ -429,54 +477,80 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     dispatch(addMessage(assistantMsg));
     dispatch(setIsStreaming(true));
 
-    // Simulate initial AI thinking time (1.2s) to showcase GavelLoader
-    await new Promise((r) => setTimeout(r, 1200));
+    try {
+      // Replaced fetch with custom axios instance
+      const response = await api.post('/chat/research', {
+        message: content,
+        model: selectedModel,
+      });
 
-    // Simulate SSE streaming
-    const responseText = mode === 'compliance'
-      ? MOCK_COMPLIANCE_RESPONSE
-      : mode === 'case'
-        ? MOCK_CASE_RESPONSE
-        : MOCK_STREAMING_RESPONSE;
-    const words = responseText.split(' ');
-    for (let i = 0; i < words.length; i++) {
-      await new Promise((r) => setTimeout(r, 20 + Math.random() * 30));
-      dispatch(
-        appendToMessage({
-          id: assistantMsgId,
-          content: (i === 0 ? '' : ' ') + words[i],
-        })
-      );
+      const responseData = response.data;
+
+      if (responseData.success && responseData.data) {
+        const responseText = typeof responseData.data === 'string'
+          ? responseData.data
+          : (responseData.data.answer || responseData.data.response || responseData.data.text || responseData.data.message || responseData.data.error || 'No answer received from the AI model.');
+
+        // Simulate streaming UX
+        const words = responseText.split(' ');
+        for (let i = 0; i < words.length; i++) {
+          await new Promise((r) => setTimeout(r, 20 + Math.random() * 20));
+          dispatch(
+            appendToMessage({
+              id: assistantMsgId,
+              content: (i === 0 ? '' : ' ') + words[i],
+            })
+          );
+        }
+
+        dispatch(
+          updateMessage({
+            id: assistantMsgId,
+            updates: {
+              isStreaming: false,
+              confidence: 'high',
+              citations: (typeof responseData.data === 'object' ? responseData.data.citations : null) || [],
+            },
+          })
+        );
+
+      } else {
+        throw new Error("Invalid API Response");
+      }
+
+    } catch (err: unknown) {
+      console.error(err);
+      const error = err as { response?: { status: number } };
+
+      // Axios throws errors for 4xx status codes automatically
+      if (error.response && error.response.status === 429) {
+        dispatch(
+          updateMessage({
+            id: assistantMsgId,
+            updates: {
+              content: "**Rate limit exceeded.** You have reached your query limit for this plan. Please upgrade your plan or try again later.",
+              isStreaming: false,
+              confidence:"low",
+            },
+          })
+        );
+      } else {
+        // Fallback for 500s or network failures
+        setRetryMessageId(assistantMsgId);
+        dispatch(
+          updateMessage({
+            id: assistantMsgId,
+            updates: {
+              content: "Something went wrong connecting to the AI. Please try again.",
+              isStreaming: false,
+            },
+          }),
+        );
+      }
+    } finally {
+      dispatch(setIsStreaming(false));
+      dispatch(incrementQueriesUsed());
     }
-
-    // Finish streaming — add citations and confidence
-    dispatch(
-      updateMessage({
-        id: assistantMsgId,
-        updates: {
-          isStreaming: false,
-          citations: (mode === 'compliance' || mode === 'case') ? [] : [
-            {
-              id: `cite_${Date.now()}`,
-              text: 'Section 302 IPC',
-              source: 'Indian Kanoon',
-              url: 'https://indiankanoon.org',
-              verified: true,
-            },
-            {
-              id: `cite_${Date.now() + 1}`,
-              text: 'State of UP v. Krishna Gopal (1988)',
-              source: 'Supreme Court',
-              verified: true,
-            },
-          ],
-          confidence: 'high',
-        },
-      })
-    );
-
-    dispatch(setIsStreaming(false));
-    dispatch(incrementQueriesUsed());
   }, [
     inputValue,
     isStreaming,
@@ -485,18 +559,20 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     activeConversationId,
     dispatch,
     router,
+    selectedModel,
   ]);
 
-  // Handle auto-triggered search query from URL parameter
   useEffect(() => {
     const qParam = searchParams.get('q');
+
     if (qParam && qParam.trim() && qParam !== lastProcessedQueryRef.current && !isStreaming) {
       lastProcessedQueryRef.current = qParam;
       dispatch(setInputValue(qParam));
       sendMessage(qParam);
     }
-  }, [searchParams, isStreaming, dispatch, sendMessage]);
 
+  }, [searchParams, isStreaming, dispatch, sendMessage]);
+  
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -504,8 +580,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     }
   };
 
-  const canSend = inputValue.trim().length > 0 && !isStreaming && !isAtLimit;
-
+  const canSend = inputValue.trim().length >= 2 && !isStreaming && !isAtLimit;
+    
   return (
     <div className="flex h-full flex-col">
       {/* Secondary nav tabs */}
@@ -528,7 +604,10 @@ function ChatContent({ mode }: { mode: ChatMode }) {
                   <div className="rounded-xl border border-error/30 bg-error/5 px-4 py-3 text-[13px] text-text-secondary">
                     Something went wrong.{' '}
                     <button
-                      onClick={() => setRetryMessageId(null)}
+                      onClick={() => {
+                        setRetryMessageId(null); 
+                        sendMessage(); 
+                      }}
                       className="inline-flex items-center gap-1 text-gold hover:text-gold-hover"
                     >
                       <RotateCcw size={12} strokeWidth={1.5} />
@@ -554,6 +633,69 @@ function ChatContent({ mode }: { mode: ChatMode }) {
               inputValue.trim() ? 'border-gold-border' : 'border-border-default'
             }`}
           >
+            {/* Model Selector Dropdown */}
+            <div className="relative flex-shrink-0" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
+                className="flex h-[34px] items-center gap-1.5 rounded-[9px] bg-bg-tertiary px-2.5 text-[12px] font-medium text-text-secondary hover:text-text-primary border border-border-default hover:border-gold-border transition-all duration-200 flex-shrink-0"
+                title="Select AI Model"
+              >
+                {(() => {
+                  const currentModel = MODELS.find(m => m.id === selectedModel) || MODELS[0];
+                  const Icon = currentModel.icon;
+                  return (
+                    <>
+                      <Icon size={14} className={currentModel.color} />
+                      <span className="hidden sm:inline">{currentModel.short}</span>
+                    </>
+                  );
+                })()}
+                <ChevronDown size={12} strokeWidth={1.5} className={`transition-transform duration-150 ${modelDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {modelDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="absolute left-0 bottom-full mb-2 w-56 rounded-xl border border-border-default bg-bg-secondary p-1 shadow-xl z-50"
+                  >
+                    <div className="px-2.5 py-1.5 text-[10px] font-semibold tracking-wider text-text-muted uppercase">
+                      Select Model
+                    </div>
+                    {MODELS.map((model) => {
+                      const Icon = model.icon;
+                      const isSelected = selectedModel === model.id;
+                      return (
+                        <button
+                          key={model.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedModel(model.id);
+                            setModelDropdownOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[12px] transition-colors ${
+                            isSelected
+                              ? 'bg-gold-subtle text-gold'
+                              : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Icon size={14} className={model.color} />
+                            <span>{model.name}</span>
+                          </div>
+                          {isSelected && <Check size={14} className="text-gold" />}
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <textarea
               ref={textareaRef}
               value={inputValue}
@@ -608,19 +750,21 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   );
 }
 
-// ── Simple markdown formatter ──────────────────
+//  Simple markdown formatter 
 function formatMarkdown(text: string): string {
   if (!text) return '';
   return text
+    .replace(/\r\n/g, '\n')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/## (.+)/g, '<h3 class="text-[14px] font-semibold text-gold mt-4 mb-1.5">$1</h3>')
-    .replace(/### (.+)/g, '<h4 class="text-[13px] font-semibold text-gold mt-3 mb-1">$1</h4>')
+    .replace(/^### (.+)/gm, '<h4 class="text-[13px] font-semibold text-gold mt-3 mb-1">$1</h4>')
+    .replace(/^## (.+)/gm, '<h3 class="text-[14px] font-semibold text-gold mt-4 mb-1.5">$1</h3>')
     .replace(/\*\*(.+?)\*\*/g, '<strong class="text-text-primary font-medium">$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/^› (.+)$/gm, '<div class="flex gap-1.5 my-0.5"><span class="text-gold flex-shrink-0">›</span><span>$1</span></div>')
     .replace(/^\d+\. (.+)$/gm, '<div class="flex gap-2 my-0.5"><span class="text-text-muted flex-shrink-0">•</span><span>$1</span></div>')
+    .replace(/^[-*] (.+)$/gm, '<div class="flex gap-2 my-0.5"><span class="text-text-muted flex-shrink-0">•</span><span>$1</span></div>')
     .replace(/\n\n/g, '<br/><br/>')
     .replace(/\n/g, '<br/>');
 }
