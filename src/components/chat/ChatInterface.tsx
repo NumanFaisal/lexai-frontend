@@ -3,8 +3,9 @@
 import { useEffect, useCallback, useRef, useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, RotateCcw, CreditCard, ChevronDown, Check, Brain, Sparkles, Cpu } from 'lucide-react';
+import { Send, Mic, RotateCcw, CreditCard, ChevronDown, Check, Brain, Sparkles, Cpu, Paperclip, X, FileText } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/store';
+import { toast } from 'react-hot-toast';
 import {
   setActiveMode,
   addMessage,
@@ -126,9 +127,17 @@ function CitationBadge({
   );
 }
 
+const normalizeMode = (m: string): ChatMode => {
+  if (!m) return 'research';
+  const lower = m.toLowerCase().replace('-', '_');
+  if (lower === 'case_analysis' || lower === 'case') return 'case';
+  return lower as ChatMode;
+};
+
 //  Message Bubble 
 function MessageBubble({ message }: { message: ChatMessage }) {
-  const mode = MODE_DATA[message.mode];
+  const normalized = normalizeMode(message.mode);
+  const mode = MODE_DATA[normalized] || MODE_DATA.research;
 
   if (message.role === 'user') {
     return (
@@ -347,6 +356,51 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [uploadedFile, setUploadedFile] = useState<{ caseId: string; name: string } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check size limit: max 15MB
+    const maxSizeBytes = 15 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      toast.error('File size exceeds the 15MB limit.');
+      return;
+    }
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', file.name);
+
+    try {
+      const response = await api.post('/case-analysis/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.success && response.data.data) {
+        const caseId = response.data.data.caseId;
+        setUploadedFile({ caseId, name: file.name });
+        toast.success(`Successfully uploaded ${file.name}`);
+      } else {
+        toast.error('Failed to upload case document.');
+      }
+    } catch (err) {
+      console.error('File Upload Error:', err);
+      toast.error('Error uploading case document. Please try again.');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''; // reset file input
+      }
+    }
+  };
+
   // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -387,7 +441,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
                   conversationId: data.id,
                   role: 'user',
                   content: q.inputText || '',
-                  mode: (data.mode || mode).toLowerCase() as ChatMode,
+                  mode: normalizeMode(data.mode || mode),
                   createdAt: q.createdAt || data.createdAt || new Date().toISOString(),
                 });
 
@@ -397,7 +451,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
                   conversationId: data.id,
                   role: 'assistant',
                   content: q.response || '',
-                  mode: (data.mode || mode).toLowerCase() as ChatMode,
+                  mode: normalizeMode(data.mode || mode),
                   citations: (q.citationsVerified || q.citations || []).map((cite: any, citeIdx: number) => ({
                     id: cite.id || `cite_${q.id || idx}_${citeIdx}`,
                     text: cite.rawText || cite.text || '',
@@ -510,20 +564,43 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     dispatch(setIsStreaming(true));
 
     try {
-      // Replaced fetch with custom axios instance
-      const response = await api.post('/chat/research', {
-        message: content,
-        model: selectedModel,
-        // Pass real conversationId to the backend if it is a real CUID (not conv_...)
-        conversationId: activeConversationId && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
-      });
+      let response;
+      if (mode === 'case') {
+        const payload: any = {
+          message: content,
+          model: selectedModel === 'gemini-2.0-flash' ? 'gpt-4o' : selectedModel,
+          conversationId: activeConversationId && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
+        };
+        if (uploadedFile) {
+          payload.caseId = uploadedFile.caseId;
+        }
+        response = await api.post('/case-analysis/analyze', payload);
+      } else {
+        response = await api.post('/chat/research', {
+          message: content,
+          model: selectedModel,
+          conversationId: activeConversationId && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
+        });
+      }
 
       const responseData = response.data;
 
       if (responseData.success && responseData.data) {
-        const responseText = typeof responseData.data === 'string'
-          ? responseData.data
-          : (responseData.data.answer || responseData.data.response || responseData.data.text || responseData.data.message || responseData.data.error || 'No answer received from the AI model.');
+        let responseText = '';
+        if (typeof responseData.data === 'string') {
+          responseText = responseData.data;
+        } else if (responseData.data) {
+          responseText = responseData.data.analysis || responseData.data.answer || responseData.data.response || responseData.data.text || responseData.data.message || responseData.data.error || 'No answer received from the AI model.';
+
+          // Format applicable laws if present
+          if (Array.isArray(responseData.data.applicableLaws) && responseData.data.applicableLaws.length > 0) {
+            responseText += '\n\n### Applicable Laws\n' + responseData.data.applicableLaws.map((law: string) => `* ${law}`).join('\n');
+          }
+          // Format recommendations if present
+          if (Array.isArray(responseData.data.recommendations) && responseData.data.recommendations.length > 0) {
+            responseText += '\n\n### Recommendations\n' + responseData.data.recommendations.map((rec: string) => `* ${rec}`).join('\n');
+          }
+        }
 
         const backendConvId = responseData.data.conversationId || responseData.data.id;
 
@@ -608,6 +685,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     } finally {
       dispatch(setIsStreaming(false));
       dispatch(incrementQueriesUsed());
+      setUploadedFile(null); // Clear uploaded file attachment
     }
   }, [
     inputValue,
@@ -619,6 +697,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     router,
     selectedModel,
     updateConversationId,
+    uploadedFile,
   ]);
 
   useEffect(() => {
@@ -687,6 +766,25 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       {/* Input bar */}
       <div className="border-t border-border-default bg-bg-primary px-4 pb-4 pt-3 lg:px-6">
         <div className={`mx-auto transition-all duration-300 ${mode === 'compliance' || mode === 'case' ? 'max-w-[1000px]' : 'max-w-[720px]'}`}>
+          
+          {/* Uploaded File Pill Indicator */}
+          {uploadedFile && (
+            <div className="mb-2 flex items-center justify-between rounded-lg border border-gold-border/30 bg-gold-subtle/10 px-3 py-1.5 text-[12px] text-gold">
+              <div className="flex items-center gap-2 truncate">
+                <FileText size={13} strokeWidth={1.5} />
+                <span className="truncate font-medium">{uploadedFile.name}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUploadedFile(null)}
+                className="text-text-muted hover:text-error transition-colors"
+                title="Remove attachment"
+              >
+                <X size={14} strokeWidth={2} />
+              </button>
+            </div>
+          )}
+
           <div
             className={`flex items-end gap-2.5 rounded-[14px] border bg-bg-secondary px-3.5 py-2.5 transition-colors duration-200 ${
               inputValue.trim() ? 'border-gold-border' : 'border-border-default'
@@ -780,6 +878,30 @@ function ChatContent({ mode }: { mode: ChatMode }) {
             >
               <Mic size={16} strokeWidth={1.5} />
             </button>
+
+            {/* File Upload Button (Only for Case Analysis mode) */}
+            {mode === 'case' && (
+              <>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept=".pdf,.docx,image/*,audio/*"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading || isAtLimit}
+                  className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] bg-bg-tertiary transition-all duration-200 hover:bg-bg-elevated ${
+                    isUploading ? 'text-gold animate-pulse' : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                  title="Upload Case Document (PDF, DOCX, Image, Audio. Max 15MB)"
+                >
+                  <Paperclip size={16} strokeWidth={1.5} />
+                </button>
+              </>
+            )}
 
             {/* Send button */}
             <button

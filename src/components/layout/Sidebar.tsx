@@ -36,6 +36,10 @@ const MODE_ICONS: Record<string, any> = {
   COMPLIANCE: ShieldCheck,
   case: Gavel,
   CASE: Gavel,
+  case_analysis: Gavel,
+  CASE_ANALYSIS: Gavel,
+  'case-analysis': Gavel,
+  'CASE-ANALYSIS': Gavel,
 };
 
 function SidebarContent() {
@@ -47,6 +51,22 @@ function SidebarContent() {
 
   const closeMobile = () => dispatch(setMobileSidebarOpen(false));
 
+  const getCurrentModeFromPath = (path: string) => {
+    if (path.startsWith('/chat')) return 'research';
+    if (path.startsWith('/draft')) return 'draft';
+    if (path.startsWith('/compliance')) return 'compliance';
+    if (path.startsWith('/case')) return 'case';
+    return null;
+  };
+  const currentScreenMode = getCurrentModeFromPath(pathname);
+
+  const filteredConversations = conversations.filter((conv) => {
+    if (!currentScreenMode) return true;
+    const convMode = conv.mode.toLowerCase().replace('-', '_');
+    const normalizedConvMode = (convMode === 'case_analysis' || convMode === 'case') ? 'case' : convMode;
+    return normalizedConvMode === currentScreenMode;
+  });
+
   const handleConvClick = (conv: any) => {
     const modeRouteMap: Record<string, string> = {
       research: '/chat',
@@ -57,6 +77,10 @@ function SidebarContent() {
       COMPLIANCE: '/compliance',
       case: '/case',
       CASE: '/case',
+      case_analysis: '/case',
+      CASE_ANALYSIS: '/case',
+      'case-analysis': '/case',
+      'CASE-ANALYSIS': '/case',
     };
     const route = modeRouteMap[conv.mode] || '/chat';
     router.push(`${route}?conversationId=${conv.id}`);
@@ -131,12 +155,12 @@ function SidebarContent() {
             Recent Chats
           </h3>
           <div className="space-y-0.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
-            {conversations.length === 0 ? (
+            {filteredConversations.length === 0 ? (
               <p className="px-3 py-2 text-[11px] text-text-disabled italic">
                 No recent chats
               </p>
             ) : (
-              conversations.map((conv) => {
+              filteredConversations.map((conv) => {
                 const isActive = activeConversationId === conv.id;
                 const Icon = MODE_ICONS[conv.mode] || MessageSquare;
 

@@ -4,9 +4,11 @@ import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Search, Bookmark, BookmarkCheck, Clock } from 'lucide-react';
-import { MOCK_VAULT_ITEMS, MODE_DATA } from '@/lib/mock-data';
+import { MODE_DATA } from '@/lib/mock-data';
 import { listItemStagger } from '@/lib/animations';
 import type { ChatMode, VaultItem } from '@/lib/types';
+import api from '@/lib/axios';
+import GavelLoader from '@/components/ui/GavelLoader';
 
 const FILTER_OPTIONS: { value: ChatMode | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -16,12 +18,58 @@ const FILTER_OPTIONS: { value: ChatMode | 'all'; label: string }[] = [
   { value: 'case', label: 'Case Analysis' },
 ];
 
+const inferMode = (inputText: string, responseText: string): ChatMode => {
+  const inputLower = (inputText || '').toLowerCase();
+  const responseLower = (responseText || '').toLowerCase();
+  
+  if (responseLower.includes('compliance audit') || inputLower.includes('compliance')) {
+    return 'compliance';
+  }
+  if (responseLower.includes('irac analysis') || responseLower.includes('case analysis') || inputLower.includes('case analysis') || inputLower.includes('murder')) {
+    return 'case';
+  }
+  if (responseLower.includes('draft') || responseLower.includes('agreement') || responseLower.includes('contract') || inputLower.includes('draft')) {
+    return 'draft';
+  }
+  return 'research';
+};
+
 export default function VaultPage() {
   const router = useRouter();
-  const [items, setItems] = useState<VaultItem[]>(MOCK_VAULT_ITEMS);
+  const [items, setItems] = useState<VaultItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<ChatMode | 'all'>('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Fetch actual chat history from backend API
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await api.get('/chat/history');
+        if (response.data.success && Array.isArray(response.data.data)) {
+          const mappedItems: VaultItem[] = response.data.data.map((q: any) => {
+            const mode = inferMode(q.inputText, q.response);
+            return {
+              id: q.id,
+              title: q.inputText ? q.inputText.split('\n')[0].slice(0, 80) : 'Untitled Query',
+              preview: q.response || '',
+              mode,
+              bookmarked: false,
+              conversationId: q.conversationId || q.id,
+              createdAt: q.createdAt || new Date().toISOString(),
+            };
+          });
+          setItems(mappedItems);
+        }
+      } catch (err) {
+        console.error('Failed to fetch chat history:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchHistory();
+  }, []);
 
   // Debounce search
   useEffect(() => {
@@ -56,7 +104,8 @@ export default function VaultPage() {
   };
 
   const openConversation = (item: VaultItem) => {
-    router.push(`/chat?mode=${item.mode}&conversationId=${item.conversationId}`);
+    const route = item.mode === 'research' ? 'chat' : item.mode;
+    router.push(`/${route}?conversationId=${item.conversationId}`);
   };
 
   const formatDate = (dateStr: string) => {
@@ -117,101 +166,107 @@ export default function VaultPage() {
         </div>
 
         {/* Items list */}
-        <motion.div
-          className="mt-6 space-y-3"
-          variants={listItemStagger.container}
-          initial="initial"
-          animate="animate"
-          key={`${filter}-${debouncedSearch}`}
-        >
-          {filteredItems.length === 0 ? (
-            <div className="py-16 text-center">
-              <p className="text-[14px] text-text-muted">
-                No items found
-              </p>
-              <p className="mt-1 text-[12px] text-text-disabled">
-                Try adjusting your search or filters
-              </p>
-            </div>
-          ) : (
-            filteredItems.map((item) => {
-              const modeData = MODE_DATA[item.mode];
-              return (
-                <motion.div
-                  key={item.id}
-                  variants={listItemStagger.item}
-                  className="group cursor-pointer rounded-2xl border border-border-default bg-bg-secondary p-4 transition-all duration-200 hover:border-opacity-60"
-                  style={{
-                    ['--hover-border' as string]: `${modeData.color}99`,
-                  }}
-                  onClick={() => openConversation(item)}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = `${modeData.color}60`;
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = '';
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Mode icon */}
-                    <div
-                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-[16px]"
-                      style={{
-                        backgroundColor: `${modeData.color}1A`,
-                      }}
-                    >
-                      {modeData.icon}
-                    </div>
-
-                    {/* Content */}
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-[14px] font-medium text-text-primary">
-                        {item.title}
-                      </h3>
-                      <p className="mt-1 text-[12px] leading-relaxed text-text-secondary line-clamp-2">
-                        {item.preview}
-                      </p>
-                      <div className="mt-2 flex items-center gap-3 text-[11px] text-text-muted">
-                        <span className="flex items-center gap-1">
-                          <Clock size={12} strokeWidth={1.5} />
-                          {formatDate(item.createdAt)}
-                        </span>
-                        <span
-                          className="rounded-full px-1.5 py-0.5 text-[10px]"
-                          style={{
-                            backgroundColor: `${modeData.color}1A`,
-                            color: modeData.color,
-                          }}
-                        >
-                          {modeData.shortLabel}
-                        </span>
+        {isLoading ? (
+          <div className="flex h-[300px] items-center justify-center">
+            <GavelLoader />
+          </div>
+        ) : (
+          <motion.div
+            className="mt-6 space-y-3"
+            variants={listItemStagger.container}
+            initial="initial"
+            animate="animate"
+            key={`${filter}-${debouncedSearch}`}
+          >
+            {filteredItems.length === 0 ? (
+              <div className="py-16 text-center">
+                <p className="text-[14px] text-text-muted">
+                  No items found
+                </p>
+                <p className="mt-1 text-[12px] text-text-disabled">
+                  Try adjusting your search or filters
+                </p>
+              </div>
+            ) : (
+              filteredItems.map((item) => {
+                const modeData = MODE_DATA[item.mode];
+                return (
+                  <motion.div
+                    key={item.id}
+                    variants={listItemStagger.item}
+                    className="group cursor-pointer rounded-2xl border border-border-default bg-bg-secondary p-4 transition-all duration-200 hover:border-opacity-60"
+                    style={{
+                      ['--hover-border' as string]: `${modeData.color}99`,
+                    }}
+                    onClick={() => openConversation(item)}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.borderColor = `${modeData.color}60`;
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.borderColor = '';
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Mode icon */}
+                      <div
+                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-[16px]"
+                        style={{
+                          backgroundColor: `${modeData.color}1A`,
+                        }}
+                      >
+                        {modeData.icon}
                       </div>
-                    </div>
 
-                    {/* Bookmark */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleBookmark(item.id);
-                      }}
-                      className="flex-shrink-0 rounded-lg p-1.5 text-text-muted transition-colors hover:bg-bg-tertiary hover:text-gold"
-                    >
-                      {item.bookmarked ? (
-                        <BookmarkCheck
-                          size={18}
-                          strokeWidth={1.5}
-                          className="text-gold"
-                        />
-                      ) : (
-                        <Bookmark size={18} strokeWidth={1.5} />
-                      )}
-                    </button>
-                  </div>
-                </motion.div>
-              );
-            })
-          )}
-        </motion.div>
+                      {/* Content */}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-[14px] font-medium text-text-primary">
+                          {item.title}
+                        </h3>
+                        <p className="mt-1 text-[12px] leading-relaxed text-text-secondary line-clamp-2">
+                          {item.preview}
+                        </p>
+                        <div className="mt-2 flex items-center gap-3 text-[11px] text-text-muted">
+                          <span className="flex items-center gap-1">
+                            <Clock size={12} strokeWidth={1.5} />
+                            {formatDate(item.createdAt)}
+                          </span>
+                          <span
+                            className="rounded-full px-1.5 py-0.5 text-[10px]"
+                            style={{
+                              backgroundColor: `${modeData.color}1A`,
+                              color: modeData.color,
+                            }}
+                          >
+                            {modeData.shortLabel}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Bookmark */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleBookmark(item.id);
+                        }}
+                        className="flex-shrink-0 rounded-lg p-1.5 text-text-muted transition-colors hover:bg-bg-tertiary hover:text-gold"
+                      >
+                        {item.bookmarked ? (
+                          <BookmarkCheck
+                            size={18}
+                            strokeWidth={1.5}
+                            className="text-gold"
+                          />
+                        ) : (
+                          <Bookmark size={18} strokeWidth={1.5} />
+                        )}
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );
