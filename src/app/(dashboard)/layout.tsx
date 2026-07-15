@@ -10,6 +10,7 @@ import { pageTransition } from '@/lib/animations';
 import api from '@/lib/axios';
 import { useEffect } from 'react';
 import { clearUser, setInitialized, setUser } from '@/store/slices/authSlice';
+import { setConversations } from '@/store/slices/chatSlice';
 
 export default function DashboardLayout({
   children,
@@ -66,6 +67,24 @@ export default function DashboardLayout({
       hydrateAuth();
     }
   }, [isInitialized, dispatch, router]);
+
+  // Fetch actual user conversations list on mount/auth state change
+  useEffect(() => {
+    if (isAuthenticated) {
+      const fetchConversations = async () => {
+        try {
+          const response = await api.get('/chat/conversations');
+          if (response.data.success && response.data.data) {
+            dispatch(setConversations(response.data.data));
+          }
+        } catch (err) {
+          console.error('Failed to fetch conversations on mount:', err);
+        }
+      };
+      fetchConversations();
+    }
+  }, [isAuthenticated, dispatch]);
+
 
   // 2. Show loading screen during auth hydration
   if (!isInitialized) {

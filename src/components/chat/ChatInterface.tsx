@@ -17,11 +17,11 @@ import {
   setActiveConversation,
   setConversations,
   addConversation,
+  updateConversationId,
 } from '@/store/slices/chatSlice';
 import { incrementQueriesUsed } from '@/store/slices/authSlice';
 import {
   MODE_DATA,
-  MOCK_CONVERSATIONS,
   MOCK_MESSAGES,
   MOCK_STREAMING_RESPONSE,
   MOCK_COMPLIANCE_RESPONSE,
@@ -366,37 +366,68 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
     const urlConvId = searchParams.get('conversationId');
     if (urlConvId) {
-      // URL has a specific conversation ID, load it
       dispatch(setActiveConversation(urlConvId));
-      const msgs = MOCK_MESSAGES[urlConvId] || [];
-      dispatch(setMessages(msgs));
-      return;
-    }
 
-    // Check if current active conversation in Redux matches this mode.
-    // If it doesn't match, we must load the correct mode's conversation or clear.
-    const activeConv = conversations.find(c => c.id === activeConversationId);
-    if (!activeConv || activeConv.mode !== mode) {
-      const modeConvs = conversations.filter((c) => c.mode === mode);
-      if (modeConvs.length > 0) {
-        // Load the most recent conversation for this mode
-        const latest = modeConvs[0];
-        dispatch(setActiveConversation(latest.id));
-        const msgs = MOCK_MESSAGES[latest.id] || [];
+      if (urlConvId.startsWith('conv_')) {
+        // Fallback to mock data if it's a mock conversation
+        const msgs = MOCK_MESSAGES[urlConvId] || [];
         dispatch(setMessages(msgs));
       } else {
-        // Clear chat to start empty state
-        dispatch(clearChat());
-      }
-    }
-  }, [mode, searchParams, conversations, dispatch, activeConversationId]);
+        // Fetch actual conversation from backend API
+        const fetchMessages = async () => {
+          try {
+            const response = await api.get(`/chat/conversations/${urlConvId}`);
+            if (response.data.success && response.data.data) {
+              const data = response.data.data;
+              const mappedMsgs: ChatMessage[] = [];
+              (data.queries || []).forEach((q: any, idx: number) => {
+                // 1. User message
+                mappedMsgs.push({
+                  id: `msg_${urlConvId}_${idx}_user`,
+                  conversationId: data.id,
+                  role: 'user',
+                  content: q.inputText || '',
+                  mode: (data.mode || mode).toLowerCase() as ChatMode,
+                  createdAt: q.createdAt || data.createdAt || new Date().toISOString(),
+                });
 
-  // Load conversations list
-  useEffect(() => {
-    if (conversations.length === 0) {
-      dispatch(setConversations(MOCK_CONVERSATIONS));
+                // 2. Assistant message
+                mappedMsgs.push({
+                  id: q.id || `msg_${urlConvId}_${idx}_assistant`,
+                  conversationId: data.id,
+                  role: 'assistant',
+                  content: q.response || '',
+                  mode: (data.mode || mode).toLowerCase() as ChatMode,
+                  citations: (q.citationsVerified || q.citations || []).map((cite: any, citeIdx: number) => ({
+                    id: cite.id || `cite_${q.id || idx}_${citeIdx}`,
+                    text: cite.rawText || cite.text || '',
+                    source: cite.actName || cite.caseName || 'Source',
+                    url: cite.kanoonUrl || cite.url,
+                    verified: !!cite.verified,
+                    type: cite.type,
+                    rawText: cite.rawText,
+                    sectionNum: cite.sectionNum,
+                    actName: cite.actName,
+                    caseName: cite.caseName,
+                    kanoonUrl: cite.kanoonUrl,
+                  })),
+                  confidence: (q.confidenceLevel || 'HIGH').toLowerCase() as any,
+                  createdAt: q.createdAt || data.createdAt || new Date().toISOString(),
+                });
+              });
+              dispatch(setMessages(mappedMsgs));
+            }
+          } catch (error) {
+            console.error('Error fetching conversation messages:', error);
+          }
+        };
+        fetchMessages();
+      }
+    } else {
+      // Never show previous chat by default when opening the chat screen
+      dispatch(clearChat());
     }
-  }, [dispatch, conversations.length]);
+  }, [mode, searchParams, dispatch]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -430,10 +461,12 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       textareaRef.current.style.height = 'auto';
     }
 
+    const tempConvId = activeConversationId || `conv_${Date.now()}`;
+
     // Create user message
     const userMsg: ChatMessage = {
       id: `msg_${Date.now()}`,
-      conversationId: activeConversationId || `conv_${Date.now()}`,
+      conversationId: tempConvId,
       role: 'user',
       content,
       mode: mode,
@@ -442,13 +475,12 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
     dispatch(addMessage(userMsg));
 
-    // If no active conversation, create one
+    // If no active conversation, create a temporary one in store
     if (!activeConversationId) {
-      const newConvId = `conv_${Date.now()}`;
-      dispatch(setActiveConversation(newConvId));
+      dispatch(setActiveConversation(tempConvId));
       dispatch(
         addConversation({
-          id: newConvId,
+          id: tempConvId,
           title: content.slice(0, 50) + (content.length > 50 ? '...' : ''),
           mode: mode,
           lastMessage: content,
@@ -457,7 +489,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
           updatedAt: new Date().toISOString(),
         })
       );
-      router.replace(`/${mode === 'research' ? 'chat' : mode}?conversationId=${newConvId}`, {
+      router.replace(`/${mode === 'research' ? 'chat' : mode}?conversationId=${tempConvId}`, {
         scroll: false,
       });
     }
@@ -466,7 +498,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     const assistantMsgId = `msg_${Date.now() + 1}`;
     const assistantMsg: ChatMessage = {
       id: assistantMsgId,
-      conversationId: userMsg.conversationId,
+      conversationId: tempConvId,
       role: 'assistant',
       content: '',
       mode: mode,
@@ -482,6 +514,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       const response = await api.post('/chat/research', {
         message: content,
         model: selectedModel,
+        // Pass real conversationId to the backend if it is a real CUID (not conv_...)
+        conversationId: activeConversationId && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
       });
 
       const responseData = response.data;
@@ -490,6 +524,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
         const responseText = typeof responseData.data === 'string'
           ? responseData.data
           : (responseData.data.answer || responseData.data.response || responseData.data.text || responseData.data.message || responseData.data.error || 'No answer received from the AI model.');
+
+        const backendConvId = responseData.data.conversationId || responseData.data.id;
 
         // Simulate streaming UX
         const words = responseText.split(' ');
@@ -513,6 +549,28 @@ function ChatContent({ mode }: { mode: ChatMode }) {
             },
           })
         );
+
+        // If the backend returned a new conversation ID, map our local state and URL to it
+        const currentActiveId = activeConversationId || tempConvId;
+        if (backendConvId && backendConvId !== currentActiveId) {
+          dispatch(updateConversationId({ oldId: currentActiveId, newId: backendConvId }));
+          router.replace(`/${mode === 'research' ? 'chat' : mode}?conversationId=${backendConvId}`, {
+            scroll: false,
+          });
+        }
+
+        // Refresh the conversations list to ensure the sidebar shows the new/updated conversation
+        const refreshConversations = async () => {
+          try {
+            const listRes = await api.get('/chat/conversations');
+            if (listRes.data.success && listRes.data.data) {
+              dispatch(setConversations(listRes.data.data));
+            }
+          } catch (e) {
+            console.error('Failed to refresh conversations list:', e);
+          }
+        };
+        refreshConversations();
 
       } else {
         throw new Error("Invalid API Response");
@@ -560,6 +618,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     dispatch,
     router,
     selectedModel,
+    updateConversationId,
   ]);
 
   useEffect(() => {

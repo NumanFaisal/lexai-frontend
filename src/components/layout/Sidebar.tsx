@@ -13,6 +13,7 @@ import {
   X,
   Scale,
   Plus,
+  MessageSquare,
 } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setMobileSidebarOpen } from '@/store/slices/uiSlice';
@@ -26,13 +27,41 @@ const NAV_ITEMS = [
   { href: '/case', label: 'Case Analysis', icon: Gavel },
 ];
 
+const MODE_ICONS: Record<string, any> = {
+  research: BookOpen,
+  RESEARCH: BookOpen,
+  draft: FileText,
+  DRAFT: FileText,
+  compliance: ShieldCheck,
+  COMPLIANCE: ShieldCheck,
+  case: Gavel,
+  CASE: Gavel,
+};
+
 function SidebarContent() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAppSelector((s) => s.auth);
+  const { conversations, activeConversationId } = useAppSelector((s) => s.chat);
   const dispatch = useAppDispatch();
 
   const closeMobile = () => dispatch(setMobileSidebarOpen(false));
+
+  const handleConvClick = (conv: any) => {
+    const modeRouteMap: Record<string, string> = {
+      research: '/chat',
+      RESEARCH: '/chat',
+      draft: '/draft',
+      DRAFT: '/draft',
+      compliance: '/compliance',
+      COMPLIANCE: '/compliance',
+      case: '/case',
+      CASE: '/case',
+    };
+    const route = modeRouteMap[conv.mode] || '/chat';
+    router.push(`${route}?conversationId=${conv.id}`);
+    closeMobile();
+  };
 
   return (
     <div className="flex h-full flex-col bg-[#0D0D0F] border-r border-[#1A1A1D]">
@@ -58,41 +87,83 @@ function SidebarContent() {
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-2 space-y-1">
-        {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-          const Icon = item.icon;
+      {/* Scrollable middle container (Navigation + Recent Chats) */}
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-6 scrollbar-thin">
+        {/* Navigation */}
+        <nav className="space-y-1">
+          {NAV_ITEMS.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={closeMobile}
-              className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors duration-150 ${
-                isActive
-                  ? 'bg-[#C9A84C14] text-gold'
-                  : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
-              }`}
-            >
-              {/* Active left accent */}
-              {isActive && (
-                <motion.div
-                  layoutId="sidebar-active"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-gold"
-                  transition={{ duration: 0.15, ease: 'easeOut' }}
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={closeMobile}
+                className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors duration-150 ${
+                  isActive
+                    ? 'bg-[#C9A84C14] text-gold'
+                    : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
+                }`}
+              >
+                {/* Active left accent */}
+                {isActive && (
+                  <motion.div
+                    layoutId="sidebar-active"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-gold"
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                  />
+                )}
+                <Icon
+                  size={18}
+                  strokeWidth={1.5}
+                  className={isActive ? 'text-gold' : 'text-text-muted group-hover:text-text-secondary'}
                 />
-              )}
-              <Icon
-                size={18}
-                strokeWidth={1.5}
-                className={isActive ? 'text-gold' : 'text-text-muted group-hover:text-text-secondary'}
-              />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Recent Chats Section */}
+        <div className="space-y-2">
+          <h3 className="px-3 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+            Recent Chats
+          </h3>
+          <div className="space-y-0.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+            {conversations.length === 0 ? (
+              <p className="px-3 py-2 text-[11px] text-text-disabled italic">
+                No recent chats
+              </p>
+            ) : (
+              conversations.map((conv) => {
+                const isActive = activeConversationId === conv.id;
+                const Icon = MODE_ICONS[conv.mode] || MessageSquare;
+
+                return (
+                  <button
+                    key={conv.id}
+                    onClick={() => handleConvClick(conv)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors text-left ${
+                      isActive
+                        ? 'bg-[#C9A84C14] text-gold font-medium'
+                        : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
+                    }`}
+                    title={conv.title}
+                  >
+                    <Icon
+                      size={14}
+                      className={isActive ? 'text-gold shrink-0' : 'text-text-muted shrink-0'}
+                    />
+                    <span className="truncate flex-1">{conv.title}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+
 
       {/* New Research Button */}
       <div className="px-3 mb-4 shrink-0">

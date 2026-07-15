@@ -70,6 +70,21 @@ const chatSlice = createSlice({
     addConversation(state, action: PayloadAction<Conversation>) {
       state.conversations.unshift(action.payload);
     },
+    updateConversationId(
+      state,
+      action: PayloadAction<{ oldId: string; newId: string }>
+    ) {
+      const { oldId, newId } = action.payload;
+      if (state.activeConversationId === oldId) {
+        state.activeConversationId = newId;
+      }
+      state.messages = state.messages.map((m) =>
+        m.conversationId === oldId ? { ...m, conversationId: newId } : m
+      );
+      state.conversations = state.conversations.map((c) =>
+        c.id === oldId ? { ...c, id: newId } : c
+      );
+    },
   },
 });
 
@@ -85,6 +100,8 @@ export const {
   setInputValue,
   clearChat,
   addConversation,
+  updateConversationId,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;
+
