@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useRef, useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, RotateCcw, CreditCard, ChevronDown, Check, Brain, Sparkles, Cpu, Paperclip, X, FileText } from 'lucide-react';
+import { Send, Mic, RotateCcw, CreditCard, ChevronDown, ChevronUp, Check, Brain, Sparkles, Cpu, Paperclip, X, FileText, Briefcase, Trash2, Download } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { toast } from 'react-hot-toast';
 import {
@@ -135,20 +135,157 @@ const normalizeMode = (m: string): ChatMode => {
 };
 
 //  Message Bubble 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({ 
+  message,
+  onFillCompliance,
+  onEditCompliance
+}: { 
+  message: ChatMessage;
+  onFillCompliance?: (data: { businessType: string; state: string; headcount: number; revenueBracket: string }) => void;
+  onEditCompliance?: (content: string) => void;
+}) {
   const normalized = normalizeMode(message.mode);
   const mode = MODE_DATA[normalized] || MODE_DATA.research;
 
+  const [submitted, setSubmitted] = useState(false);
+  const isInfoRequired = message.role === 'assistant' && message.content.includes('[INFO_REQUIRED]') && !submitted;
+  const cleanContent = message.content.replace('[INFO_REQUIRED]', '').trim();
+
+  // Local state for interactive compliance items
+  const [items, setItems] = useState<any[]>( (message as any).complianceItems || [] );
+  const [editingNotes, setEditingNotes] = useState<{ [itemId: string]: string }>({});
+  const [showNotesForm, setShowNotesForm] = useState<{ [itemId: string]: boolean }>({});
+  const [isChecklistExpanded, setIsChecklistExpanded] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const reportId = (message as any).reportId;
+
+  // Sync state if message updates
+  useEffect(() => {
+    if ((message as any).complianceItems) {
+      setItems((message as any).complianceItems);
+    }
+  }, [(message as any).complianceItems]);
+
+  const toggleItem = async (itemId: string, currentStatus: boolean) => {
+    if (!reportId) return;
+    const newStatus = !currentStatus;
+    
+    // Optimistic update
+    setItems(prev => prev.map(item => item.id === itemId ? { ...item, isCompleted: newStatus } : item));
+
+    try {
+      const response = await api.patch(`/compliance/${reportId}/items/${itemId}`, {
+        isCompleted: newStatus
+      });
+      if (response.data && response.data.status === 'success') {
+        toast.success(newStatus ? 'Marked as completed' : 'Marked as incomplete');
+      } else {
+        throw new Error('Update failed');
+      }
+    } catch (err) {
+      console.error('Failed to update compliance item status:', err);
+      toast.error('Failed to update status. Please try again.');
+      // Rollback on error
+      setItems((message as any).complianceItems || []);
+    }
+  };
+
+  const saveNotes = async (itemId: string, currentStatus: boolean) => {
+    if (!reportId) return;
+    const notesValue = editingNotes[itemId] ?? '';
+
+    // Optimistic update
+    setItems(prev => prev.map(item => item.id === itemId ? { ...item, notes: notesValue } : item));
+    setShowNotesForm(prev => ({ ...prev, [itemId]: false }));
+
+    try {
+      const response = await api.patch(`/compliance/${reportId}/items/${itemId}`, {
+        isCompleted: currentStatus,
+        notes: notesValue
+      });
+      if (response.data && response.data.status === 'success') {
+        toast.success('Notes updated successfully');
+      } else {
+        throw new Error('Update failed');
+      }
+    } catch (err) {
+      console.error('Failed to save compliance item notes:', err);
+      toast.error('Failed to update notes.');
+      // Rollback on error
+      setItems((message as any).complianceItems || []);
+    }
+  };
+
+  const handlePdfExport = async () => {
+    if (isExporting || !reportId) return;
+    setIsExporting(true);
+
+    try {
+      const res = await api.post(`/compliance/${reportId}/export/pdf`);
+      if (res.data && res.data.status === 'success') {
+        toast.loading('Generating PDF. Your download will start automatically once ready...', { id: `pdf-export-${reportId}` });
+
+        let pollCount = 0;
+        const interval = setInterval(async () => {
+          pollCount++;
+          if (pollCount > 30) { // Max 1 minute polling (30 * 2s)
+            clearInterval(interval);
+            setIsExporting(false);
+            toast.error('PDF generation timed out. Please try again.', { id: `pdf-export-${reportId}` });
+            return;
+          }
+
+          try {
+            const reportRes = await api.get(`/compliance/${reportId}`);
+            if (reportRes.data && reportRes.data.status === 'success' && reportRes.data.data?.pdfUrl) {
+              clearInterval(interval);
+              setIsExporting(false);
+              toast.success('PDF generated successfully! Starting download...', { id: `pdf-export-${reportId}` });
+              
+              const pdfUrl = reportRes.data.data.pdfUrl;
+              const link = document.createElement('a');
+              link.href = pdfUrl;
+              link.setAttribute('download', `Compliance_Report_${reportId}.pdf`);
+              link.setAttribute('target', '_blank');
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }
+          } catch (pollErr) {
+            console.error('Error polling compliance PDF url:', pollErr);
+          }
+        }, 2000); // Poll every 2 seconds
+      } else {
+        throw new Error('Export trigger failed');
+      }
+    } catch (err) {
+      console.error('Failed to trigger PDF export:', err);
+      setIsExporting(false);
+      toast.error('Failed to start PDF export. Please try again.', { id: `pdf-export-${reportId}` });
+    }
+  };
+
   if (message.role === 'user') {
+    const isComplianceMsg = message.content.startsWith('Compliance check:');
     return (
       <motion.div
-        className="flex justify-end"
+        className="flex justify-end group"
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.15, ease: 'easeOut' }}
       >
-        <div className="max-w-[88%] rounded-[14px_14px_4px_14px] border border-[#C9A84C44] bg-gradient-to-br from-[#C9A84C22] to-[#C9A84C11] px-3.5 py-2.5 text-[13px] leading-[1.6] text-text-primary">
-          {message.content}
+        <div className="max-w-[88%] flex flex-col items-end gap-1">
+          <div className="rounded-[14px_14px_4px_14px] border border-[#C9A84C44] bg-gradient-to-br from-[#C9A84C22] to-[#C9A84C11] px-3.5 py-2.5 text-[13px] leading-[1.6] text-text-primary">
+            {message.content}
+          </div>
+          {isComplianceMsg && onEditCompliance && (
+            <button
+              onClick={() => onEditCompliance(message.content)}
+              className="text-[10px] text-gold hover:text-gold-hover hover:underline opacity-0 group-hover:opacity-100 transition-opacity duration-150 mr-1 flex items-center gap-1 font-medium"
+            >
+              ⚙️ Update parameters
+            </button>
+          )}
         </div>
       </motion.div>
     );
@@ -208,7 +345,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         </div>
 
         {/* Response content */}
-        <div className="rounded-[4px_14px_14px_14px] border border-border-default bg-[#141416] px-4 py-3.5">
+        <div className="rounded-[4px_14px_14px_14px] border border-border-default bg-[#141416] px-4 py-3.5 min-w-[280px]">
           {message.isStreaming && !message.content ? (
             <GavelLoader isThinking={true} />
           ) : (
@@ -217,9 +354,206 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                 message.isStreaming ? 'typing-cursor' : ''
               }`}
               dangerouslySetInnerHTML={{
-                __html: formatMarkdown(message.content),
+                __html: formatMarkdown(cleanContent),
               }}
             />
+          )}
+
+          {/* Interactive Compliance Form in Bubble */}
+          {isInfoRequired && onFillCompliance && !message.isStreaming && (
+            <div className="mt-4 border-t border-border-default/20 pt-4 space-y-3.5">
+              <p className="text-[12px] text-text-secondary font-medium">To proceed, please enter your business details:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[9px] font-mono tracking-wider text-text-muted uppercase">Business Type</label>
+                  <input
+                    type="text"
+                    id={`bubble-bt-${message.id}`}
+                    placeholder="e.g. SaaS, E-commerce, Services"
+                    className="bg-transparent border-b border-border-default/60 rounded-none py-1 text-[12.5px] text-text-primary placeholder:text-text-disabled outline-none focus:border-gold transition-colors"
+                  />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[9px] font-mono tracking-wider text-text-muted uppercase">State / Region</label>
+                  <input
+                    type="text"
+                    id={`bubble-state-${message.id}`}
+                    placeholder="e.g. Jharkhand, Karnataka"
+                    className="bg-transparent border-b border-border-default/60 rounded-none py-1 text-[12.5px] text-text-primary placeholder:text-text-disabled outline-none focus:border-gold transition-colors"
+                  />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[9px] font-mono tracking-wider text-text-muted uppercase">Headcount</label>
+                  <input
+                    type="number"
+                    id={`bubble-hc-${message.id}`}
+                    placeholder="e.g. 10"
+                    className="bg-transparent border-b border-border-default/60 rounded-none py-1 text-[12.5px] text-text-primary placeholder:text-text-disabled outline-none focus:border-gold transition-colors"
+                  />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[9px] font-mono tracking-wider text-text-muted uppercase">Annual Revenue Bracket</label>
+                  <select
+                    id={`bubble-rev-${message.id}`}
+                    className="bg-transparent border-b border-border-default/60 rounded-none py-1 text-[12.5px] text-text-primary outline-none focus:border-gold transition-colors appearance-none"
+                    style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23888' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.1rem center', backgroundSize: '1.1rem', backgroundRepeat: 'no-repeat', paddingRight: '1.5rem' }}
+                  >
+                    <option value="" disabled selected className="bg-bg-secondary text-text-muted">Select bracket...</option>
+                    <option value="&lt;20L" className="bg-bg-secondary text-text-primary">&lt;20L</option>
+                    <option value="20L-1Cr" className="bg-bg-secondary text-text-primary">20L-1Cr</option>
+                    <option value="1Cr-10Cr" className="bg-bg-secondary text-text-primary">1Cr-10Cr</option>
+                    <option value="&gt;10Cr" className="bg-bg-secondary text-text-primary">&gt;10Cr</option>
+                  </select>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const btInput = document.getElementById(`bubble-bt-${message.id}`) as HTMLInputElement;
+                  const stateInput = document.getElementById(`bubble-state-${message.id}`) as HTMLInputElement;
+                  const hcInput = document.getElementById(`bubble-hc-${message.id}`) as HTMLInputElement;
+                  const revInput = document.getElementById(`bubble-rev-${message.id}`) as HTMLSelectElement;
+                  if (btInput && stateInput && btInput.value.trim() && stateInput.value.trim()) {
+                    onFillCompliance({
+                      businessType: btInput.value.trim(),
+                      state: stateInput.value.trim(),
+                      headcount: parseInt(hcInput?.value, 10) || 0,
+                      revenueBracket: revInput?.value || 'Not specified'
+                    });
+                    setSubmitted(true);
+                  } else {
+                    toast.error('Please fill in all details.');
+                  }
+                }}
+                className="w-full bg-gold/10 hover:bg-gold/20 text-gold border border-gold-border/20 transition-colors rounded-lg py-2 text-[12px] font-medium flex items-center justify-center gap-1.5 mt-2"
+              >
+                <Briefcase size={12} />
+                Submit Compliance Details
+              </button>
+            </div>
+          )}
+
+          {/* Interactive Compliance Checklist Items */}
+          {!message.isStreaming && items && items.length > 0 && (
+            <div className="mt-4 border-t border-border-default/20 pt-4 space-y-3">
+              <div 
+                onClick={() => setIsChecklistExpanded(!isChecklistExpanded)}
+                className="flex items-center justify-between cursor-pointer group pb-1"
+              >
+                <h4 className="font-serif text-[14px] font-semibold text-text-primary flex items-center gap-1.5 font-serif select-none group-hover:text-gold transition-colors">
+                  <Briefcase size={14} className="text-gold" />
+                  Interactive Audit Checklist
+                </h4>
+                <div className="flex items-center gap-2.5 flex-shrink-0 text-text-muted group-hover:text-gold transition-colors">
+                  {reportId && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePdfExport();
+                      }}
+                      disabled={isExporting}
+                      className="p-1 rounded hover:bg-gold/10 transition-colors flex items-center gap-1 text-[11px] font-medium text-gold disabled:opacity-50"
+                      title="Export and Download PDF Report"
+                    >
+                      <Download size={13} className={isExporting ? 'animate-bounce' : ''} />
+                      {isExporting ? 'Exporting...' : 'Export PDF'}
+                    </button>
+                  )}
+                  {isChecklistExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </div>
+              </div>
+
+              {isChecklistExpanded && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  {items.map((item) => (
+                    <div 
+                      key={item.id}
+                      className={`p-3 rounded-lg border transition-all duration-150 ${
+                        item.isCompleted 
+                          ? 'bg-[#18181b]/40 border-success/15 opacity-70' 
+                          : 'bg-bg-secondary border-border-default hover:border-gold/30'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <input 
+                          type="checkbox"
+                          checked={!!item.isCompleted}
+                          onChange={() => toggleItem(item.id, !!item.isCompleted)}
+                          className="mt-0.5 rounded border-border-default text-gold focus:ring-gold bg-bg-primary h-4 w-4 cursor-pointer"
+                        />
+                        <div className="flex-1 space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`text-[12.5px] font-medium transition-all duration-150 ${item.isCompleted ? 'line-through text-text-muted' : 'text-text-primary'}`}>
+                              {item.title}
+                            </span>
+                            {item.priority === 'URGENT' && (
+                              <span className="px-1.5 py-0.5 bg-[#BE7B7B1A] border border-[#BE7B7B44] text-[#BE7B7B] text-[8.5px] rounded font-bold uppercase tracking-wider font-sans">
+                                URGENT
+                              </span>
+                            )}
+                            {item.priority === 'THIS_QUARTER' && (
+                              <span className="px-1.5 py-0.5 bg-[#E8C96A1A] border border-[#E8C96A44] text-[#E8C96A] text-[8.5px] rounded font-bold uppercase tracking-wider font-sans font-medium">
+                                THIS QUARTER
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="text-[11px] text-text-secondary space-y-0.5 pt-0.5 leading-relaxed">
+                            <div><span className="text-text-muted">Law:</span> <span className="text-text-primary">{item.law}{item.section ? ` (Section ${item.section})` : ''}</span></div>
+                            <div><span className="text-text-muted">Requirement:</span> <span className="text-text-primary">{item.requirement}</span></div>
+                            {item.deadline && <div><span className="text-text-muted">Deadline:</span> <span className="text-text-primary">{item.deadline}</span></div>}
+                            {item.penalty && <div><span className="text-text-muted">Penalty:</span> <span className="text-text-primary text-[#BE7B7B]">{item.penalty}</span></div>}
+                            {item.action && <div><span className="text-text-muted">Action Required:</span> <span className="text-text-primary text-gold">{item.action}</span></div>}
+                          </div>
+
+                          {/* Notes badge / content */}
+                          {item.notes && (
+                            <div className="mt-1.5 bg-[#141416]/50 px-2 py-1 rounded text-[11px] text-[#C8C3B8]/90 italic border-l-2 border-gold/40">
+                              Note: {item.notes}
+                            </div>
+                          )}
+                          
+                          {/* Note forms edit */}
+                          {showNotesForm[item.id] ? (
+                            <div className="mt-2 flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={editingNotes[item.id] ?? item.notes ?? ''}
+                                onChange={(e) => setEditingNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                placeholder="Add a compliance note..."
+                                className="flex-1 bg-[#141416] border border-border-default/60 rounded px-2 py-1 text-[11.5px] text-text-primary placeholder:text-text-disabled outline-none focus:border-gold"
+                              />
+                              <button
+                                onClick={() => saveNotes(item.id, !!item.isCompleted)}
+                                className="px-2.5 py-1 bg-gold text-bg-primary rounded text-[10px] font-semibold hover:bg-gold-hover transition-colors"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setShowNotesForm(prev => ({ ...prev, [item.id]: false }))}
+                                className="px-2.5 py-1 bg-[#141416] border border-border-default/60 rounded text-[10px] text-text-muted hover:text-text-primary transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setShowNotesForm(prev => ({ ...prev, [item.id]: true }));
+                                setEditingNotes(prev => ({ ...prev, [item.id]: item.notes ?? '' }));
+                              }}
+                              className="mt-1.5 text-[10px] text-gold hover:text-gold-hover hover:underline transition-colors flex items-center gap-1 font-medium"
+                            >
+                              📝 {item.notes ? 'Edit Note' : 'Add Note'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Citations */}
@@ -352,13 +686,93 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   const [retryMessageId, setRetryMessageId] = useState<string | null>(null);
   const lastProcessedQueryRef = useRef<string | null>(null);
 
-  const [selectedModel, setSelectedModel] = useState('gemini-2.0-flash');
+  const [selectedModel, setSelectedModel] = useState(mode === 'compliance' ? 'gpt-4o' : 'gemini-2.0-flash');
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [uploadedFile, setUploadedFile] = useState<{ caseId: string; name: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [showComplianceForm, setShowComplianceForm] = useState(mode === 'compliance');
+  const [complianceData, setComplianceData] = useState({
+    businessType: '',
+    state: '',
+    headcount: 0,
+    revenueBracket: '',
+    hasUserData: false,
+    isFood: false,
+    isFintech: false,
+  });
+  const [complianceReports, setComplianceReports] = useState<any[]>([]);
+  const [exportingReports, setExportingReports] = useState<{ [reportId: string]: boolean }>({});
+
+  const handleRecentPdfExport = async (rId: string) => {
+    if (exportingReports[rId]) return;
+    setExportingReports(prev => ({ ...prev, [rId]: true }));
+
+    try {
+      const res = await api.post(`/compliance/${rId}/export/pdf`);
+      if (res.data && res.data.status === 'success') {
+        toast.loading('Generating PDF. Your download will start automatically once ready...', { id: `pdf-export-${rId}` });
+
+        let pollCount = 0;
+        const interval = setInterval(async () => {
+          pollCount++;
+          if (pollCount > 30) {
+            clearInterval(interval);
+            setExportingReports(prev => ({ ...prev, [rId]: false }));
+            toast.error('PDF generation timed out. Please try again.', { id: `pdf-export-${rId}` });
+            return;
+          }
+
+          try {
+            const reportRes = await api.get(`/compliance/${rId}`);
+            if (reportRes.data && reportRes.data.status === 'success' && reportRes.data.data?.pdfUrl) {
+              clearInterval(interval);
+              setExportingReports(prev => ({ ...prev, [rId]: false }));
+              toast.success('PDF generated successfully! Starting download...', { id: `pdf-export-${rId}` });
+              
+              const pdfUrl = reportRes.data.data.pdfUrl;
+              const link = document.createElement('a');
+              link.href = pdfUrl;
+              link.setAttribute('download', `Compliance_Report_${rId}.pdf`);
+              link.setAttribute('target', '_blank');
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }
+          } catch (pollErr) {
+            console.error('Error polling compliance PDF url:', pollErr);
+          }
+        }, 2000);
+      } else {
+        throw new Error('Export trigger failed');
+      }
+    } catch (err) {
+      console.error('Failed to trigger PDF export:', err);
+      setExportingReports(prev => ({ ...prev, [rId]: false }));
+      toast.error('Failed to start PDF export. Please try again.', { id: `pdf-export-${rId}` });
+    }
+  };
+
+  // Sync compliance form visibility when mode changes
+  useEffect(() => {
+    setShowComplianceForm(mode === 'compliance');
+    if (mode === 'compliance') {
+      const fetchReports = async () => {
+        try {
+          const res = await api.get('/compliance');
+          if (res.data && (res.data.success || res.data.status === 'success')) {
+            setComplianceReports(res.data.data || []);
+          }
+        } catch (err) {
+          console.error('Failed to fetch compliance reports:', err);
+        }
+      };
+      fetchReports();
+    }
+  }, [mode]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -417,6 +831,11 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   // Sync page mode and load/clear conversation history based on active route
   useEffect(() => {
     dispatch(setActiveMode(mode));
+    if (mode === 'compliance') {
+      setSelectedModel('gpt-4o');
+    } else {
+      setSelectedModel('gemini-2.0-flash');
+    }
 
     const urlConvId = searchParams.get('conversationId');
     if (urlConvId) {
@@ -426,7 +845,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
         // Fallback to mock data if it's a mock conversation
         const msgs = MOCK_MESSAGES[urlConvId] || [];
         dispatch(setMessages(msgs));
-      } else {
+      } else if (!urlConvId.startsWith('temp_')) {
         // Fetch actual conversation from backend API
         const fetchMessages = async () => {
           try {
@@ -467,7 +886,9 @@ function ChatContent({ mode }: { mode: ChatMode }) {
                   })),
                   confidence: (q.confidenceLevel || 'HIGH').toLowerCase() as any,
                   createdAt: q.createdAt || data.createdAt || new Date().toISOString(),
-                });
+                  complianceItems: q.complianceItems,
+                  reportId: q.reportId,
+                } as any);
               });
               dispatch(setMessages(mappedMsgs));
             }
@@ -502,9 +923,10 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   );
 
   // Send message with simulated streaming
-  const sendMessage = useCallback(async (overrideContent?: string) => {
+  const sendMessage = useCallback(async (overrideContent?: string, overrideComplianceData?: any) => {
     const content = (overrideContent !== undefined ? overrideContent : inputValue).trim();
-    if (!content || isStreaming) return;
+    if (!content && mode !== 'compliance') return;
+    if (isStreaming) return;
 
     // Check limit
     if (isAtLimit) return;
@@ -515,14 +937,20 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       textareaRef.current.style.height = 'auto';
     }
 
-    const tempConvId = activeConversationId || `conv_${Date.now()}`;
+    const tempConvId = activeConversationId || `temp_${Date.now()}`;
+
+    // For compliance mode, display exactly the structured parameters query
+    const activeCompliance = overrideComplianceData || complianceData;
+    const displayContent = mode === 'compliance'
+      ? `Compliance check: ${activeCompliance.businessType || 'SaaS'}, ${activeCompliance.state || 'Jharkhand'}, ${activeCompliance.headcount || 0} employees`
+      : content;
 
     // Create user message
     const userMsg: ChatMessage = {
       id: `msg_${Date.now()}`,
       conversationId: tempConvId,
       role: 'user',
-      content,
+      content: displayContent,
       mode: mode,
       createdAt: new Date().toISOString(),
     };
@@ -569,17 +997,24 @@ function ChatContent({ mode }: { mode: ChatMode }) {
         const payload: any = {
           message: content,
           model: selectedModel === 'gemini-2.0-flash' ? 'gpt-4o' : selectedModel,
-          conversationId: activeConversationId && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
+          conversationId: activeConversationId && !activeConversationId.startsWith('temp_') && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
         };
         if (uploadedFile) {
           payload.caseId = uploadedFile.caseId;
         }
         response = await api.post('/case-analysis/analyze', payload);
+      } else if (mode === 'compliance') {
+        response = await api.post('/chat/compliance', {
+          message: displayContent,
+          model: selectedModel,
+          conversationId: activeConversationId && !activeConversationId.startsWith('temp_') && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
+          ...activeCompliance,
+        });
       } else {
         response = await api.post('/chat/research', {
           message: content,
           model: selectedModel,
-          conversationId: activeConversationId && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
+          conversationId: activeConversationId && !activeConversationId.startsWith('temp_') && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
         });
       }
 
@@ -590,7 +1025,24 @@ function ChatContent({ mode }: { mode: ChatMode }) {
         if (typeof responseData.data === 'string') {
           responseText = responseData.data;
         } else if (responseData.data) {
-          responseText = responseData.data.analysis || responseData.data.answer || responseData.data.response || responseData.data.text || responseData.data.message || responseData.data.error || 'No answer received from the AI model.';
+          responseText = responseData.data.response || responseData.data.analysis || responseData.data.answer || responseData.data.text || responseData.data.message || responseData.data.summary || responseData.data.error || 'No answer received from the AI model.';
+
+          // Format compliance checklist if present (only if responseText is not already preformatted by backend response)
+          if (!responseData.data.response && Array.isArray(responseData.data.items) && responseData.data.items.length > 0) {
+            responseText = `### Compliance Audit Checklist\n\n`;
+            responseText += `${responseData.data.summary || ''}\n\n`;
+            responseData.data.items.forEach((item: any) => {
+              responseText += `\n**[${item.priority || 'INFO'}] ${item.title || 'Obligation'}**\n`;
+              responseText += `* **Law**: ${item.law || 'N/A'}${item.section ? ` (Section ${item.section})` : ''}\n`;
+              responseText += `* **Requirement**: ${item.requirement || 'N/A'}\n`;
+              if (item.deadline) responseText += `* **Deadline**: ${item.deadline}\n`;
+              if (item.penalty) responseText += `* **Penalty**: ${item.penalty}\n`;
+              if (item.action) responseText += `* **Action Required**: ${item.action}\n`;
+            });
+            if (responseData.data.disclaimer) {
+              responseText += `\n\n_${responseData.data.disclaimer}_`;
+            }
+          }
 
           // Format applicable laws if present
           if (Array.isArray(responseData.data.applicableLaws) && responseData.data.applicableLaws.length > 0) {
@@ -686,6 +1138,17 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       dispatch(setIsStreaming(false));
       dispatch(incrementQueriesUsed());
       setUploadedFile(null); // Clear uploaded file attachment
+      if (mode === 'compliance') {
+        setComplianceData({
+          businessType: '',
+          state: '',
+          headcount: 0,
+          revenueBracket: '',
+          hasUserData: false,
+          isFood: false,
+          isFintech: false,
+        });
+      }
     }
   }, [
     inputValue,
@@ -698,6 +1161,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     selectedModel,
     updateConversationId,
     uploadedFile,
+    complianceData,
   ]);
 
   useEffect(() => {
@@ -729,11 +1193,110 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       <div className="flex-1 overflow-y-auto px-4 py-6 lg:px-0">
         <div className={`mx-auto space-y-5 transition-all duration-300 ${mode === 'compliance' || mode === 'case' ? 'max-w-[1000px]' : 'max-w-[720px]'}`}>
           {messages.length === 0 && !isStreaming ? (
-            <EmptyState mode={mode} />
+            <div className="space-y-8">
+              <EmptyState mode={mode} />
+              
+              {mode === 'compliance' && complianceReports.length > 0 && (
+                <div className="mt-8 border-t border-border-default/30 pt-8 space-y-4 max-w-[720px] mx-auto">
+                  <h3 className="font-serif text-[18px] font-semibold text-text-primary">Recent Compliance Audits</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {complianceReports.map((report) => (
+                      <div 
+                        key={report.id}
+                        onClick={() => {
+                          const profile = {
+                            businessType: report.businessType || '',
+                            state: report.state || '',
+                            headcount: report.headcount || 0,
+                            revenueBracket: report.revenueBracket || '',
+                            hasUserData: !!report.hasUserData,
+                            isFood: !!report.isFood,
+                            isFintech: !!report.isFintech
+                          };
+                          setComplianceData(profile);
+                          sendMessage('', profile);
+                        }}
+                        className="p-4 bg-[#141416] border border-border-default hover:border-gold/50 rounded-xl cursor-pointer transition-all duration-200 group flex items-start justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <h4 className="text-[13px] font-semibold text-text-primary group-hover:text-gold transition-colors">
+                            {report.businessType} Audit
+                          </h4>
+                          <p className="text-[11px] text-text-secondary">
+                            State: {report.state} · {report.totalItems || 0} obligations
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-[10px] bg-gold/10 text-gold border border-gold-border/20 px-2 py-0.5 rounded font-medium">
+                            {report.completedCount || 0}/{report.totalItems || 0} Done
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent loading report
+                              handleRecentPdfExport(report.id);
+                            }}
+                            disabled={!!exportingReports[report.id]}
+                            className="p-1.5 rounded text-text-disabled hover:text-gold hover:bg-gold/10 transition-colors disabled:opacity-50"
+                            title="Export and Download PDF Report"
+                          >
+                            <Download size={13} className={exportingReports[report.id] ? 'animate-bounce' : ''} />
+                          </button>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation(); // Prevent loading report
+                              if (confirm('Are you sure you want to permanently delete this compliance audit report?')) {
+                                try {
+                                  await api.delete(`/compliance/${report.id}`);
+                                  setComplianceReports(prev => prev.filter(r => r.id !== report.id));
+                                  toast.success('Report deleted successfully');
+                                } catch (err) {
+                                  console.error('Failed to delete compliance report:', err);
+                                  toast.error('Failed to delete report. Please try again.');
+                                }
+                              }
+                            }}
+                            className="p-1.5 rounded text-text-disabled hover:text-error hover:bg-error/10 transition-colors"
+                            title="Delete permanently"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <>
               {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
+                <MessageBubble 
+                  key={msg.id} 
+                  message={msg} 
+                  onFillCompliance={(data) => {
+                    setComplianceData(prev => {
+                      const updated = { ...prev, ...data };
+                      // Auto-trigger analysis with a slight delay
+                      setTimeout(() => {
+                        sendMessage(`Analyze compliance for ${updated.businessType} in ${updated.state}`);
+                      }, 100);
+                      return updated;
+                    });
+                  }}
+                  onEditCompliance={(content) => {
+                    const match = content.match(/Compliance check:\s*([^,]+),\s*([^,]+),\s*(\d+)\s+employees/);
+                    if (match) {
+                      setComplianceData(prev => ({
+                        ...prev,
+                        businessType: match[1].trim(),
+                        state: match[2].trim(),
+                        headcount: parseInt(match[3], 10) || 0
+                      }));
+                      setShowComplianceForm(true);
+                      toast.success('Loaded parameters back into form. Adjust and re-submit.');
+                    }
+                  }}
+                />
               ))}
 
               {/* Retry card */}
@@ -784,6 +1347,123 @@ function ChatContent({ mode }: { mode: ChatMode }) {
               </button>
             </div>
           )}
+
+          {/* Compliance Form */}
+          <AnimatePresence>
+            {mode === 'compliance' && showComplianceForm && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                className="overflow-hidden mb-3 border border-border-default rounded-[14px] bg-bg-tertiary p-4 text-[13px] text-text-primary"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-border-default pb-2">
+                    <span className="font-medium text-gold flex items-center gap-1.5">
+                      <Briefcase size={14} />
+                      Structured Compliance Data
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowComplianceForm(false)}
+                      className="text-text-secondary hover:text-text-primary text-[11px]"
+                    >
+                      Hide
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {/* Business Type */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-medium text-text-secondary">Business Type</label>
+                      <input
+                        type="text"
+                        value={complianceData.businessType}
+                        onChange={(e) => setComplianceData({ ...complianceData, businessType: e.target.value })}
+                        placeholder="e.g. Fintech Startup, Cafe"
+                        className="bg-bg-secondary border border-border-default rounded-lg px-2.5 py-1.5 text-[12px] text-text-primary placeholder:text-text-disabled outline-none focus:border-gold-border transition-colors"
+                      />
+                    </div>
+
+                    {/* State */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-medium text-text-secondary">State / Region</label>
+                      <input
+                        type="text"
+                        value={complianceData.state}
+                        onChange={(e) => setComplianceData({ ...complianceData, state: e.target.value })}
+                        placeholder="e.g. Karnataka"
+                        className="bg-bg-secondary border border-border-default rounded-lg px-2.5 py-1.5 text-[12px] text-text-primary placeholder:text-text-disabled outline-none focus:border-gold-border transition-colors"
+                      />
+                    </div>
+
+                    {/* Headcount */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-medium text-text-secondary">Headcount</label>
+                      <input
+                        type="number"
+                        value={complianceData.headcount || ''}
+                        onChange={(e) => setComplianceData({ ...complianceData, headcount: parseInt(e.target.value, 10) || 0 })}
+                        placeholder="0"
+                        className="bg-bg-secondary border border-border-default rounded-lg px-2.5 py-1.5 text-[12px] text-text-primary placeholder:text-text-disabled outline-none focus:border-gold-border transition-colors"
+                      />
+                    </div>
+
+                    {/* Revenue Bracket */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-medium text-text-secondary">Annual Revenue Bracket</label>
+                      <select
+                        value={complianceData.revenueBracket}
+                        onChange={(e) => setComplianceData({ ...complianceData, revenueBracket: e.target.value })}
+                        className="bg-bg-secondary border border-border-default rounded-lg px-2.5 py-1.5 text-[12px] text-text-primary outline-none focus:border-gold-border transition-colors appearance-none"
+                        style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23888' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat', paddingRight: '2rem' }}
+                      >
+                        <option value="" disabled className="bg-bg-secondary text-text-muted">Select bracket...</option>
+                        <option value="&lt;20L" className="bg-bg-secondary text-text-primary">&lt;20L</option>
+                        <option value="20L-1Cr" className="bg-bg-secondary text-text-primary">20L-1Cr</option>
+                        <option value="1Cr-10Cr" className="bg-bg-secondary text-text-primary">1Cr-10Cr</option>
+                        <option value="&gt;10Cr" className="bg-bg-secondary text-text-primary">&gt;10Cr</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Checkboxes */}
+                  <div className="flex flex-wrap items-center gap-6 pt-1 border-t border-border-default/50">
+                    <label className="flex items-center gap-2 cursor-pointer select-none text-[12px] text-text-secondary hover:text-text-primary transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={complianceData.hasUserData}
+                        onChange={(e) => setComplianceData({ ...complianceData, hasUserData: e.target.checked })}
+                        className="rounded border-border-default text-gold focus:ring-gold bg-bg-secondary h-4 w-4"
+                      />
+                      <span>Processes User Data</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer select-none text-[12px] text-text-secondary hover:text-text-primary transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={complianceData.isFood}
+                        onChange={(e) => setComplianceData({ ...complianceData, isFood: e.target.checked })}
+                        className="rounded border-border-default text-gold focus:ring-gold bg-bg-secondary h-4 w-4"
+                      />
+                      <span>Food Business</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer select-none text-[12px] text-text-secondary hover:text-text-primary transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={complianceData.isFintech}
+                        onChange={(e) => setComplianceData({ ...complianceData, isFintech: e.target.checked })}
+                        className="rounded border-border-default text-gold focus:ring-gold bg-bg-secondary h-4 w-4"
+                      />
+                      <span>Fintech Business</span>
+                    </label>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div
             className={`flex items-end gap-2.5 rounded-[14px] border bg-bg-secondary px-3.5 py-2.5 transition-colors duration-200 ${
@@ -879,6 +1559,22 @@ function ChatContent({ mode }: { mode: ChatMode }) {
               <Mic size={16} strokeWidth={1.5} />
             </button>
 
+            {/* Compliance Form Toggle Button */}
+            {mode === 'compliance' && (
+              <button
+                type="button"
+                onClick={() => setShowComplianceForm(!showComplianceForm)}
+                className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] border transition-all duration-200 ${
+                  showComplianceForm
+                    ? 'bg-gold-subtle text-gold border-gold-border'
+                    : 'bg-bg-tertiary text-text-secondary hover:text-text-primary hover:bg-bg-elevated border-border-default'
+                }`}
+                title="Toggle Compliance Data Form"
+              >
+                <Briefcase size={16} strokeWidth={1.5} />
+              </button>
+            )}
+
             {/* File Upload Button (Only for Case Analysis mode) */}
             {mode === 'case' && (
               <>
@@ -939,6 +1635,8 @@ function formatMarkdown(text: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    .replace(/\[URGENT\]/g, '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#BE7B7B1A] border border-[#BE7B7B66] text-[#BE7B7B] mr-1.5 font-sans">URGENT</span>')
+    .replace(/\[THIS_QUARTER\]/g, '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#E8C96A1A] border border-[#E8C96A44] text-[#E8C96A] mr-1.5 font-sans font-medium">THIS QUARTER</span>')
     .replace(/^### (.+)/gm, '<h4 class="text-[13px] font-semibold text-gold mt-3 mb-1">$1</h4>')
     .replace(/^## (.+)/gm, '<h3 class="text-[14px] font-semibold text-gold mt-4 mb-1.5">$1</h3>')
     .replace(/\*\*(.+?)\*\*/g, '<strong class="text-text-primary font-medium">$1</strong>')
