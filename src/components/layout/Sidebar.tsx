@@ -19,6 +19,7 @@ import { useAppSelector, useAppDispatch } from '@/store';
 import { setMobileSidebarOpen } from '@/store/slices/uiSlice';
 import { clearChat, setActiveMode } from '@/store/slices/chatSlice';
 import { sidebarTransition, backdropTransition } from '@/lib/animations';
+import { groupConversationsByDate } from '@/lib/dateUtils';
 
 const NAV_ITEMS = [
   { href: '/chat', label: 'Research', icon: BookOpen },
@@ -89,13 +90,13 @@ function SidebarContent() {
 
   return (
     <div className="flex h-full flex-col bg-[#0D0D0F] border-r border-[#1A1A1D]">
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-[18px] pt-5 pb-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gold to-[#8B6914]">
+      {/* Logo (Non-interactive branding) */}
+      <div className="flex items-center gap-3 px-[18px] pt-5 pb-4 cursor-default select-none">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gold to-[#8B6914] cursor-default">
           <Scale className="h-4 w-4 text-white" strokeWidth={1.5} />
         </div>
-        <div>
-          <h1 className="font-serif text-[18px] font-bold leading-none text-text-primary font-serif">
+        <div className="cursor-default">
+          <h1 className="font-serif text-[18px] font-bold leading-none text-text-primary">
             LexAI
           </h1>
           <p className="mt-0.5 text-[9px] font-medium uppercase tracking-[1.5px] text-text-muted">
@@ -154,35 +155,42 @@ function SidebarContent() {
           <h3 className="px-3 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
             Recent Chats
           </h3>
-          <div className="space-y-0.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
             {filteredConversations.length === 0 ? (
               <p className="px-3 py-2 text-[11px] text-text-disabled italic">
                 No recent chats
               </p>
             ) : (
-              filteredConversations.map((conv) => {
-                const isActive = activeConversationId === conv.id;
-                const Icon = MODE_ICONS[conv.mode] || MessageSquare;
+              groupConversationsByDate(filteredConversations).map(([groupName, items]) => (
+                <div key={groupName} className="space-y-0.5">
+                  <h4 className="px-3 text-[9px] font-bold uppercase tracking-widest text-text-muted/60 mb-1">
+                    {groupName}
+                  </h4>
+                  {items.map((conv) => {
+                    const isActive = activeConversationId === conv.id;
+                    const Icon = MODE_ICONS[conv.mode] || MessageSquare;
 
-                return (
-                  <button
-                    key={conv.id}
-                    onClick={() => handleConvClick(conv)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors text-left ${
-                      isActive
-                        ? 'bg-[#C9A84C14] text-gold font-medium'
-                        : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
-                    }`}
-                    title={conv.title}
-                  >
-                    <Icon
-                      size={14}
-                      className={isActive ? 'text-gold shrink-0' : 'text-text-muted shrink-0'}
-                    />
-                    <span className="truncate flex-1">{conv.title}</span>
-                  </button>
-                );
-              })
+                    return (
+                      <button
+                        key={conv.id}
+                        onClick={() => handleConvClick(conv)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors text-left ${
+                          isActive
+                            ? 'bg-[#C9A84C14] text-gold font-medium'
+                            : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
+                        }`}
+                        title={conv.title}
+                      >
+                        <Icon
+                          size={14}
+                          className={isActive ? 'text-gold shrink-0' : 'text-text-muted shrink-0'}
+                        />
+                        <span className="truncate flex-1">{conv.title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))
             )}
           </div>
         </div>

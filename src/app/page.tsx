@@ -71,7 +71,7 @@ export default function HomePage() {
 
       {/* Top Navbar */}
       <nav className="fixed top-0 left-0 w-full z-50 bg-bg-secondary/80 backdrop-blur-md border-b border-border-default flex justify-between items-center px-6 md:px-12 h-[52px]">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-default select-none">
           <span className="text-gold text-lg">⚖</span>
           <span className="font-serif text-[18px] font-bold text-text-primary tracking-wide">LexAI</span>
         </div>
@@ -807,18 +807,18 @@ export default function HomePage() {
         </div>
         <div className="flex flex-wrap gap-x-12 gap-y-4">
           <div className="flex flex-col gap-2">
-            <Link href="#" className="text-text-secondary hover:text-gold transition-colors text-[13px] font-sans">
+            <Link href="/terms" className="text-text-secondary hover:text-gold transition-colors text-[13px] font-sans">
               Terms of Service
             </Link>
-            <Link href="#" className="text-text-secondary hover:text-gold transition-colors text-[13px] font-sans">
+            <Link href="/privacy" className="text-text-secondary hover:text-gold transition-colors text-[13px] font-sans">
               Privacy Policy
             </Link>
           </div>
           <div className="flex flex-col gap-2">
-            <Link href="#" className="text-text-secondary hover:text-gold transition-colors text-[13px] font-sans">
+            <Link href="/compliance" className="text-text-secondary hover:text-gold transition-colors text-[13px] font-sans">
               Regulatory Compliance
             </Link>
-            <Link href="#" className="text-text-secondary hover:text-gold transition-colors text-[13px] font-sans">
+            <Link href="/pricing" className="text-text-secondary hover:text-gold transition-colors text-[13px] font-sans">
               Contact Counsel
             </Link>
           </div>

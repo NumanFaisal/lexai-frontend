@@ -12,12 +12,12 @@ export default function AuthLayout({
         {/* Glow decoration */}
         <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-gold/5 blur-[100px] pointer-events-none" />
         
-        {/* Header Logo */}
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gold/10 border border-gold-border">
+        {/* Header Logo (Non-interactive branding) */}
+        <div className="flex items-center gap-3 relative z-10 cursor-default select-none">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gold/10 border border-gold-border cursor-default">
             <Scale className="h-5 w-5 text-gold" strokeWidth={1.5} />
           </div>
-          <div>
+          <div className="cursor-default">
             <h1 className="font-serif text-lg font-bold text-text-primary tracking-wide">
               LexAI
             </h1>

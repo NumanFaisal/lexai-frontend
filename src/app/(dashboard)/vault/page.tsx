@@ -18,19 +18,16 @@ const FILTER_OPTIONS: { value: ChatMode | 'all'; label: string }[] = [
   { value: 'case', label: 'Case Analysis' },
 ];
 
-const inferMode = (inputText: string, responseText: string): ChatMode => {
+const normalizeMode = (m?: string, inputText?: string): ChatMode => {
+  if (m) {
+    const lower = m.toLowerCase().replace('-', '_');
+    if (lower === 'case_analysis' || lower === 'case') return 'case';
+    if (lower === 'research' || lower === 'draft' || lower === 'compliance') return lower as ChatMode;
+  }
   const inputLower = (inputText || '').toLowerCase();
-  const responseLower = (responseText || '').toLowerCase();
-  
-  if (responseLower.includes('compliance audit') || inputLower.includes('compliance')) {
-    return 'compliance';
-  }
-  if (responseLower.includes('irac analysis') || responseLower.includes('case analysis') || inputLower.includes('case analysis') || inputLower.includes('murder')) {
-    return 'case';
-  }
-  if (responseLower.includes('draft') || responseLower.includes('agreement') || responseLower.includes('contract') || inputLower.includes('draft')) {
-    return 'draft';
-  }
+  if (inputLower.includes('compliance')) return 'compliance';
+  if (inputLower.includes('case analysis')) return 'case';
+  if (inputLower.includes('draft contract') || inputLower.includes('draft agreement')) return 'draft';
   return 'research';
 };
 
@@ -49,10 +46,10 @@ export default function VaultPage() {
         const response = await api.get('/chat/history');
         if (response.data.success && Array.isArray(response.data.data)) {
           const mappedItems: VaultItem[] = response.data.data.map((q: any) => {
-            const mode = inferMode(q.inputText, q.response);
+            const mode = normalizeMode(q.mode || q.conversation?.mode, q.inputText);
             return {
               id: q.id,
-              title: q.inputText ? q.inputText.split('\n')[0].slice(0, 80) : 'Untitled Query',
+              title: q.title || q.conversation?.title || (q.inputText ? q.inputText.split('\n')[0].slice(0, 50) : 'Untitled Query'),
               preview: q.response || '',
               mode,
               bookmarked: false,

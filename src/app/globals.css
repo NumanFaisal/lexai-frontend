@@ -171,6 +171,51 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── CURSOR BEHAVIOR RESETS ─────────────────── */
+html, body {
+  cursor: default;
+}
+
+/* Actionable interactive elements get pointer cursor (including nested icons/text) */
+a[href]:not([href="#"]),
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+select,
+.cursor-pointer,
+.cursor-pointer * {
+  cursor: pointer;
+}
+
+/* Explicit default cursor override for non-interactive elements */
+.cursor-default,
+.cursor-default * {
+  cursor: default !important;
+}
+
+/* Disabled controls */
+button:disabled,
+input:disabled,
+select:disabled,
+.cursor-not-allowed {
+  cursor: not-allowed !important;
+}
+
+/* Text inputs */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+textarea,
+[contenteditable="true"] {
+  cursor: text;
+}
+
 /* ── FOCUS VISIBLE ───────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--color-gold);

@@ -19,6 +19,7 @@ import {
   setConversations,
   addConversation,
   updateConversationId,
+  updateConversationTitle,
 } from '@/store/slices/chatSlice';
 import { incrementQueriesUsed } from '@/store/slices/authSlice';
 import {
@@ -959,11 +960,12 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
     // If no active conversation, create a temporary one in store
     if (!activeConversationId) {
+      const initialTitle = content.slice(0, 40) + (content.length > 40 ? '...' : '');
       dispatch(setActiveConversation(tempConvId));
       dispatch(
         addConversation({
           id: tempConvId,
-          title: content.slice(0, 50) + (content.length > 50 ? '...' : ''),
+          title: initialTitle,
           mode: mode,
           lastMessage: content,
           messageCount: 1,
@@ -974,6 +976,16 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       router.replace(`/${mode === 'research' ? 'chat' : mode}?conversationId=${tempConvId}`, {
         scroll: false,
       });
+
+      // Asynchronously generate concise AI title using ultra-cheap Groq API
+      api.post('/chat/generate-title', { prompt: content })
+        .then((res) => {
+          if (res.data?.success && res.data?.data?.title) {
+            const aiTitle = res.data.data.title;
+            dispatch(updateConversationTitle({ id: tempConvId, title: aiTitle }));
+          }
+        })
+        .catch((err) => console.error('Groq title generation error:', err));
     }
 
     // Create empty assistant message for streaming

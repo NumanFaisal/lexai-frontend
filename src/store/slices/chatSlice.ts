@@ -85,6 +85,16 @@ const chatSlice = createSlice({
         c.id === oldId ? { ...c, id: newId } : c
       );
     },
+    updateConversationTitle(
+      state,
+      action: PayloadAction<{ id: string; title: string }>
+    ) {
+      const { id, title } = action.payload;
+      const idx = state.conversations.findIndex((c) => c.id === id);
+      if (idx !== -1) {
+        state.conversations[idx].title = title;
+      }
+    },
   },
 });
 
@@ -101,6 +111,7 @@ export const {
   clearChat,
   addConversation,
   updateConversationId,
+  updateConversationTitle,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;
