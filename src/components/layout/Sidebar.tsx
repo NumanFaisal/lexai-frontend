@@ -106,7 +106,7 @@ function SidebarContent() {
         {/* Mobile close */}
         <button
           onClick={closeMobile}
-          className="ml-auto lg:hidden rounded-lg p-1.5 text-text-muted hover:bg-bg-tertiary hover:text-text-secondary"
+          className="text-text-muted hover:bg-bg-tertiary hover:text-text-secondary ml-auto rounded-lg p-1.5 lg:hidden"
         >
           <X size={18} strokeWidth={1.5} />
         </button>
@@ -198,7 +198,7 @@ function SidebarContent() {
 
 
       {/* New Research Button */}
-      <div className="px-3 mb-4 shrink-0">
+      <div className="mb-4 shrink-0 px-3">
         <button
           onClick={() => {
             dispatch(clearChat());
@@ -206,7 +206,7 @@ function SidebarContent() {
             router.push('/chat');
             closeMobile();
           }}
-          className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-gold text-[#0a0a0b] font-semibold text-[13px] rounded-lg hover:bg-gold-hover transition-colors shadow-md shadow-gold/10"
+          className="bg-gold hover:bg-gold-hover shadow-gold/10 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold text-[#0a0a0b] shadow-md transition-colors"
         >
           <Plus size={16} strokeWidth={2} />
           New Research
@@ -214,17 +214,21 @@ function SidebarContent() {
       </div>
 
       {/* Settings & Support Links */}
-      <div className="px-3 py-2 border-t border-[#1A1A1D] space-y-1">
+      <div className="space-y-1 border-t border-[#1A1A1D] px-3 py-2">
         <Link
           href="/settings"
           onClick={closeMobile}
           className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 ${
             pathname === '/settings'
-              ? 'bg-[#C9A84C14] text-gold'
+              ? 'text-gold bg-[#C9A84C14]'
               : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
           }`}
         >
-          <Settings size={18} strokeWidth={1.5} className={pathname === '/settings' ? 'text-gold' : 'text-text-muted'} />
+          <Settings
+            size={18}
+            strokeWidth={1.5}
+            className={pathname === '/settings' ? 'text-gold' : 'text-text-muted'}
+          />
           <span>Settings</span>
         </Link>
         <a
@@ -233,7 +237,7 @@ function SidebarContent() {
             e.preventDefault();
             closeMobile();
           }}
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-bg-tertiary hover:text-text-primary transition-colors duration-150"
+          className="text-text-secondary hover:bg-bg-tertiary hover:text-text-primary flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150"
         >
           <HelpCircle size={18} strokeWidth={1.5} className="text-text-muted" />
           <span>Support</span>
@@ -242,17 +246,17 @@ function SidebarContent() {
 
       {/* Query counter */}
       {user && (
-        <div className="mx-3 mb-3 rounded-lg border border-border-default bg-bg-secondary px-3 py-2.5">
+        <div className="border-border-default bg-bg-secondary mx-3 mb-3 rounded-lg border px-3 py-2.5">
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-text-muted">Queries used</span>
-            <span className="font-mono text-text-secondary">
+            <span className="text-text-secondary font-mono">
               {user.queriesUsed}/{user.queriesLimit === 999999 ? '∞' : user.queriesLimit}
             </span>
           </div>
           {user.queriesLimit !== 999999 && (
-            <div className="mt-1.5 h-1 w-full rounded-full bg-bg-tertiary overflow-hidden">
+            <div className="bg-bg-tertiary mt-1.5 h-1 w-full overflow-hidden rounded-full">
               <div
-                className="h-full rounded-full bg-gold transition-all duration-300"
+                className="bg-gold h-full rounded-full transition-all duration-300"
                 style={{
                   width: `${Math.min((user.queriesUsed / user.queriesLimit) * 100, 100)}%`,
                 }}
@@ -266,14 +270,12 @@ function SidebarContent() {
       {user && (
         <div className="border-t border-[#1A1A1D] px-[18px] py-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-tertiary text-[12px] font-medium text-gold">
+            <div className="bg-bg-tertiary text-gold flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-medium">
               {user.avatarInitials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium text-text-primary">
-                {user.username}
-              </p>
-              <p className="truncate text-[11px] text-text-muted">{user.email}</p>
+              <p className="text-text-primary truncate text-[13px] font-medium">{user.username}</p>
+              <p className="text-text-muted truncate text-[11px]">{user.email}</p>
             </div>
           </div>
         </div>
@@ -281,9 +283,8 @@ function SidebarContent() {
 
       {/* Footer */}
       <div className="border-t border-[#1A1A1D] px-[18px] py-3">
-        <p className="text-[10px] leading-[1.5] text-text-disabled">
-          India&apos;s legal AI assistant. Not a substitute for professional legal
-          counsel.
+        <p className="text-text-disabled text-[10px] leading-[1.5]">
+          India&apos;s legal AI assistant. Not a substitute for professional legal counsel.
         </p>
       </div>
     </div>
@@ -297,7 +298,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:block w-[240px] flex-shrink-0">
+      <aside className="hidden w-[240px] flex-shrink-0 lg:block">
         <SidebarContent />
       </aside>
 

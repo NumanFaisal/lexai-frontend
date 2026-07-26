@@ -35,19 +35,13 @@ const chatSlice = createSlice({
     addMessage(state, action: PayloadAction<ChatMessage>) {
       state.messages.push(action.payload);
     },
-    updateMessage(
-      state,
-      action: PayloadAction<{ id: string; updates: Partial<ChatMessage> }>
-    ) {
+    updateMessage(state, action: PayloadAction<{ id: string; updates: Partial<ChatMessage> }>) {
       const idx = state.messages.findIndex((m) => m.id === action.payload.id);
       if (idx !== -1) {
         state.messages[idx] = { ...state.messages[idx], ...action.payload.updates };
       }
     },
-    appendToMessage(
-      state,
-      action: PayloadAction<{ id: string; content: string }>
-    ) {
+    appendToMessage(state, action: PayloadAction<{ id: string; content: string }>) {
       const idx = state.messages.findIndex((m) => m.id === action.payload.id);
       if (idx !== -1) {
         state.messages[idx].content += action.payload.content;

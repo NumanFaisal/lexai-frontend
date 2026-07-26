@@ -119,10 +119,7 @@ export function registerUser(data: {
   return { success: true, user };
 }
 
-export function updateUserData(
-  email: string,
-  updates: Partial<User>
-): void {
+export function updateUserData(email: string, updates: Partial<User>): void {
   const registeredUsers = getRegisteredUsers();
   if (registeredUsers[email]) {
     Object.assign(registeredUsers[email], updates);
@@ -142,9 +139,7 @@ function getRegisteredUsers(): Record<string, User & { password: string }> {
   }
 }
 
-function saveRegisteredUsers(
-  users: Record<string, User & { password: string }>
-): void {
+function saveRegisteredUsers(users: Record<string, User & { password: string }>): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem('lexai_users', JSON.stringify(users));
 }

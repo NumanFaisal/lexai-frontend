@@ -83,9 +83,7 @@ export default function VaultPage() {
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
       result = result.filter(
-        (item) =>
-          item.title.toLowerCase().includes(q) ||
-          item.preview.toLowerCase().includes(q)
+        (item) => item.title.toLowerCase().includes(q) || item.preview.toLowerCase().includes(q)
       );
     }
     return result;
@@ -94,9 +92,7 @@ export default function VaultPage() {
   const toggleBookmark = (id: string) => {
     // Optimistic update
     setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, bookmarked: !item.bookmarked } : item
-      )
+      prev.map((item) => (item.id === id ? { ...item, bookmarked: !item.bookmarked } : item))
     );
   };
 
@@ -121,27 +117,23 @@ export default function VaultPage() {
       <div className="mx-auto max-w-[800px] px-6 py-8">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="font-serif text-[30px] font-semibold text-text-primary">
-            Vault
-          </h1>
-          <span className="text-[12px] text-text-muted">
-            {filteredItems.length} items
-          </span>
+          <h1 className="text-text-primary font-serif text-[30px] font-semibold">Vault</h1>
+          <span className="text-text-muted text-[12px]">{filteredItems.length} items</span>
         </div>
 
         {/* Search */}
-        <div className="mt-5 relative">
+        <div className="relative mt-5">
           <Search
             size={16}
             strokeWidth={1.5}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+            className="text-text-muted absolute top-1/2 left-3 -translate-y-1/2"
           />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search saved research..."
-            className="w-full rounded-xl border border-border-default bg-bg-secondary py-2.5 pl-9 pr-4 text-[13px] text-text-primary placeholder:text-text-disabled outline-none transition-colors focus:border-gold-border"
+            className="border-border-default bg-bg-secondary text-text-primary placeholder:text-text-disabled focus:border-gold-border w-full rounded-xl border py-2.5 pr-4 pl-9 text-[13px] transition-colors outline-none"
           />
         </div>
 
@@ -151,11 +143,10 @@ export default function VaultPage() {
             <button
               key={opt.value}
               onClick={() => setFilter(opt.value)}
-              className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors duration-150 ${
-                filter === opt.value
-                  ? 'bg-gold-subtle border border-gold-border text-gold'
-                  : 'border border-border-default text-text-muted hover:text-text-secondary hover:border-border-default/60'
-              }`}
+              className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors duration-150 ${filter === opt.value
+                  ? 'bg-gold-subtle border-gold-border text-gold border'
+                  : 'border-border-default text-text-muted hover:text-text-secondary hover:border-border-default/60 border'
+                }`}
             >
               {opt.label}
             </button>

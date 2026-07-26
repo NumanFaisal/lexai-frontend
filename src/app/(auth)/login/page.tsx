@@ -137,28 +137,24 @@ function LoginForm() {
   return (
     <motion.div {...pageTransition} className="space-y-6">
       {/* Sign Up / Login Switcher Tabs */}
-      <div className="flex gap-8 border-b border-border-default/60 pb-3 mb-6">
+      <div className="border-border-default/60 mb-6 flex gap-8 border-b pb-3">
         <Link
           href="/signup"
-          className="font-serif text-[22px] font-semibold text-text-muted hover:text-text-secondary pb-3 -mb-[14px] transition-colors"
+          className="text-text-muted hover:text-text-secondary -mb-[14px] pb-3 font-serif text-[22px] font-semibold transition-colors"
         >
           Sign Up
         </Link>
         <Link
           href="/login"
-          className="font-serif text-[22px] font-semibold text-gold border-b-2 border-gold pb-3 -mb-[14px]"
+          className="text-gold border-gold -mb-[14px] border-b-2 pb-3 font-serif text-[22px] font-semibold"
         >
           Login
         </Link>
       </div>
 
       <div>
-        <h2 className="font-serif text-[24px] font-semibold text-text-primary">
-          Welcome back
-        </h2>
-        <p className="mt-1 text-[13px] text-text-secondary">
-          Sign in to continue to LexAI
-        </p>
+        <h2 className="text-text-primary font-serif text-[24px] font-semibold">Welcome back</h2>
+        <p className="text-text-secondary mt-1 text-[13px]">Sign in to continue to LexAI</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -170,7 +166,7 @@ function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email Address"
-              className="w-full rounded-[6px] border border-border-default bg-[#0a0a0b] px-4 py-3 text-[13px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus:border-gold-border"
+              className="border-border-default text-text-primary placeholder:text-text-muted focus:border-gold-border w-full rounded-[6px] border bg-[#0a0a0b] px-4 py-3 text-[13px] transition-colors duration-200 outline-none"
               autoComplete="email"
             />
           </div>
@@ -182,13 +178,13 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full rounded-[6px] border border-border-default bg-[#0a0a0b] px-4 py-3 pr-10 text-[13px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus:border-gold-border"
+              className="border-border-default text-text-primary placeholder:text-text-muted focus:border-gold-border w-full rounded-[6px] border bg-[#0a0a0b] px-4 py-3 pr-10 text-[13px] transition-colors duration-200 outline-none"
               autoComplete="current-password"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
+              className="text-text-muted hover:text-text-secondary absolute top-1/2 right-3 -translate-y-1/2"
             >
               {showPassword ? (
                 <EyeOff size={15} strokeWidth={1.5} />
@@ -200,15 +196,13 @@ function LoginForm() {
         </div>
 
         {error && (
-          <p className="rounded-lg bg-error/10 px-3 py-2 text-[12px] text-error">
-            {error}
-          </p>
+          <p className="bg-error/10 text-error rounded-lg px-3 py-2 text-[12px]">{error}</p>
         )}
 
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-[#c9a84c] hover:bg-[#e8c96a] text-[#0A0A0B] py-3 rounded-[6px] text-[13px] font-bold tracking-wide transition-all duration-200 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+          className="w-full cursor-pointer rounded-[6px] bg-[#c9a84c] py-3 text-[13px] font-bold tracking-wide text-[#0A0A0B] transition-all duration-200 hover:bg-[#e8c96a] active:scale-[0.98] disabled:opacity-60"
         >
           {isLoading ? 'Signing in...' : 'Sign In'}
         </button>
@@ -216,12 +210,12 @@ function LoginForm() {
 
       {/* Or continue with */}
       <div className="space-y-4">
-        <div className="relative flex py-1 items-center">
-          <div className="flex-grow border-t border-border-default/60"></div>
-          <span className="flex-shrink mx-4 text-text-muted text-[11px] font-mono uppercase tracking-wider">
+        <div className="relative flex items-center py-1">
+          <div className="border-border-default/60 flex-grow border-t"></div>
+          <span className="text-text-muted mx-4 flex-shrink font-mono text-[11px] tracking-wider uppercase">
             or continue with
           </span>
-          <div className="flex-grow border-t border-border-default/60"></div>
+          <div className="border-border-default/60 flex-grow border-t"></div>
         </div>
 
         <button
@@ -229,7 +223,7 @@ function LoginForm() {
           onClick={() => {
             console.log('Google Auth Placeholder');
           }}
-          className="w-full flex items-center justify-center gap-3 rounded-[6px] border border-border-default bg-[#0a0a0b] py-3 text-[13px] text-text-primary font-medium hover:bg-bg-secondary hover:border-text-muted transition-colors duration-200 cursor-pointer"
+          className="border-border-default text-text-primary hover:bg-bg-secondary hover:border-text-muted flex w-full cursor-pointer items-center justify-center gap-3 rounded-[6px] border bg-[#0a0a0b] py-3 text-[13px] font-medium transition-colors duration-200"
         >
           <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
             <path
@@ -254,22 +248,25 @@ function LoginForm() {
       </div>
 
       {/* Demo Credentials */}
-      <div className="rounded-[6px] border border-border-default/60 bg-bg-secondary/40 p-4 text-center">
-        <p className="text-[11px] text-text-muted leading-relaxed">
-          Demo Account: <code className="font-mono text-gold bg-bg-primary px-1.5 py-0.5 rounded">demo@lexai.in</code>
+      <div className="border-border-default/60 bg-bg-secondary/40 rounded-[6px] border p-4 text-center">
+        <p className="text-text-muted text-[11px] leading-relaxed">
+          Demo Account:{' '}
+          <code className="text-gold bg-bg-primary rounded px-1.5 py-0.5 font-mono">
+            demo@lexai.in
+          </code>
           <br />
-          Password: <code className="font-mono text-gold bg-bg-primary px-1.5 py-0.5 rounded">password123</code>
+          Password:{' '}
+          <code className="text-gold bg-bg-primary rounded px-1.5 py-0.5 font-mono">
+            password123
+          </code>
         </p>
       </div>
 
       {/* Redirect Footer */}
       <div className="text-center">
-        <p className="text-[13px] text-text-secondary">
+        <p className="text-text-secondary text-[13px]">
           Don&apos;t have an account?{' '}
-          <Link
-            href="/signup"
-            className="text-gold underline hover:text-gold-hover font-semibold"
-          >
+          <Link href="/signup" className="text-gold hover:text-gold-hover font-semibold underline">
             Create account
           </Link>
         </p>
@@ -280,7 +277,9 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="text-center py-8 text-text-muted text-[13px]">Loading...</div>}>
+    <Suspense
+      fallback={<div className="text-text-muted py-8 text-center text-[13px]">Loading...</div>}
+    >
       <LoginForm />
     </Suspense>
   );

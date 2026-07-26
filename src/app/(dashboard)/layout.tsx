@@ -12,11 +12,7 @@ import { useEffect } from 'react';
 import { clearUser, setInitialized, setUser } from '@/store/slices/authSlice';
 import { setConversations } from '@/store/slices/chatSlice';
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -97,7 +93,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bg-primary">
+    <div className="bg-bg-primary flex h-screen overflow-hidden">
       {/* Sidebar — persists, never unmounts */}
       <Sidebar />
 

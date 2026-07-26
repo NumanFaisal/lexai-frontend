@@ -27,7 +27,7 @@ export default function DocumentDetailPage() {
 
   return (
     <div className="flex h-full items-center justify-center">
-      <div className="text-[13px] text-text-muted">Loading document...</div>
+      <div className="text-text-muted text-[13px]">Loading document...</div>
     </div>
   );
 }

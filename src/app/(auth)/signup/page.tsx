@@ -107,26 +107,26 @@ export default function SignupPage() {
   return (
     <motion.div {...pageTransition} className="space-y-6">
       {/* Sign Up / Login Switcher Tabs */}
-      <div className="flex gap-8 border-b border-border-default/60 pb-3 mb-6">
+      <div className="border-border-default/60 mb-6 flex gap-8 border-b pb-3">
         <Link
           href="/signup"
-          className="font-serif text-[22px] font-semibold text-gold border-b-2 border-gold pb-3 -mb-[14px]"
+          className="text-gold border-gold -mb-[14px] border-b-2 pb-3 font-serif text-[22px] font-semibold"
         >
           Sign Up
         </Link>
         <Link
           href="/login"
-          className="font-serif text-[22px] font-semibold text-text-muted hover:text-text-secondary pb-3 -mb-[14px] transition-colors"
+          className="text-text-muted hover:text-text-secondary -mb-[14px] pb-3 font-serif text-[22px] font-semibold transition-colors"
         >
           Login
         </Link>
       </div>
 
       <div>
-        <h2 className="font-serif text-[24px] font-semibold text-text-primary">
+        <h2 className="text-text-primary font-serif text-[24px] font-semibold">
           Create your account
         </h2>
-        <p className="mt-1 text-[13px] text-text-secondary">
+        <p className="text-text-secondary mt-1 text-[13px]">
           Start with 30 free queries. No credit card.
         </p>
       </div>
@@ -134,7 +134,7 @@ export default function SignupPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* I am a... (Persona Selector) */}
         <div>
-          <label className="mb-2 block text-[13px] font-medium text-text-secondary">
+          <label className="text-text-secondary mb-2 block text-[13px] font-medium">
             I am a...
           </label>
           <div className="grid grid-cols-3 gap-3">
@@ -149,7 +149,7 @@ export default function SignupPage() {
                   key={role.id}
                   type="button"
                   onClick={() => updateField('persona', role.id)}
-                  className={`py-2 px-3 rounded-[6px] text-[12px] font-sans font-medium tracking-wide transition-all border ${
+                  className={`rounded-[6px] border px-3 py-2 font-sans text-[12px] font-medium tracking-wide transition-all ${
                     isActive
                       ? 'bg-gold/10 border-gold text-gold font-bold'
                       : 'bg-bg-secondary border-border-default text-text-secondary hover:border-text-muted hover:text-text-primary'
@@ -171,7 +171,7 @@ export default function SignupPage() {
               value={formData.username}
               onChange={(e) => updateField('username', e.target.value)}
               placeholder="Full Name"
-              className="w-full rounded-[6px] border border-border-default bg-[#0a0a0b] px-4 py-3 text-[13px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus:border-gold-border"
+              className="border-border-default text-text-primary placeholder:text-text-muted focus:border-gold-border w-full rounded-[6px] border bg-[#0a0a0b] px-4 py-3 text-[13px] transition-colors duration-200 outline-none"
             />
           </div>
 
@@ -182,7 +182,7 @@ export default function SignupPage() {
               value={formData.email}
               onChange={(e) => updateField('email', e.target.value)}
               placeholder="Email Address"
-              className="w-full rounded-[6px] border border-border-default bg-[#0a0a0b] px-4 py-3 text-[13px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus:border-gold-border"
+              className="border-border-default text-text-primary placeholder:text-text-muted focus:border-gold-border w-full rounded-[6px] border bg-[#0a0a0b] px-4 py-3 text-[13px] transition-colors duration-200 outline-none"
               autoComplete="email"
             />
           </div>
@@ -199,7 +199,7 @@ export default function SignupPage() {
                 }
               }}
               placeholder="+91 Phone Number"
-              className="w-full rounded-[6px] border border-border-default bg-[#0a0a0b] px-4 py-3 text-[13px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus:border-gold-border"
+              className="border-border-default text-text-primary placeholder:text-text-muted focus:border-gold-border w-full rounded-[6px] border bg-[#0a0a0b] px-4 py-3 text-[13px] transition-colors duration-200 outline-none"
             />
           </div>
 
@@ -210,13 +210,13 @@ export default function SignupPage() {
               value={formData.password}
               onChange={(e) => updateField('password', e.target.value)}
               placeholder="Password"
-              className="w-full rounded-[6px] border border-border-default bg-[#0a0a0b] px-4 py-3 pr-10 text-[13px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus:border-gold-border"
+              className="border-border-default text-text-primary placeholder:text-text-muted focus:border-gold-border w-full rounded-[6px] border bg-[#0a0a0b] px-4 py-3 pr-10 text-[13px] transition-colors duration-200 outline-none"
               autoComplete="new-password"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
+              className="text-text-muted hover:text-text-secondary absolute top-1/2 right-3 -translate-y-1/2"
             >
               {showPassword ? (
                 <EyeOff size={15} strokeWidth={1.5} />
@@ -228,15 +228,13 @@ export default function SignupPage() {
         </div>
 
         {error && (
-          <p className="rounded-lg bg-error/10 px-3 py-2 text-[12px] text-error">
-            {error}
-          </p>
+          <p className="bg-error/10 text-error rounded-lg px-3 py-2 text-[12px]">{error}</p>
         )}
 
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-[#c9a84c] hover:bg-[#e8c96a] text-[#0A0A0B] py-3 rounded-[6px] text-[13px] font-bold tracking-wide transition-all duration-200 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+          className="w-full cursor-pointer rounded-[6px] bg-[#c9a84c] py-3 text-[13px] font-bold tracking-wide text-[#0A0A0B] transition-all duration-200 hover:bg-[#e8c96a] active:scale-[0.98] disabled:opacity-60"
         >
           {isLoading ? 'Creating account...' : 'Create Account'}
         </button>
@@ -244,12 +242,12 @@ export default function SignupPage() {
 
       {/* Or continue with */}
       <div className="space-y-4">
-        <div className="relative flex py-1 items-center">
-          <div className="flex-grow border-t border-border-default/60"></div>
-          <span className="flex-shrink mx-4 text-text-muted text-[11px] font-mono uppercase tracking-wider">
+        <div className="relative flex items-center py-1">
+          <div className="border-border-default/60 flex-grow border-t"></div>
+          <span className="text-text-muted mx-4 flex-shrink font-mono text-[11px] tracking-wider uppercase">
             or continue with
           </span>
-          <div className="flex-grow border-t border-border-default/60"></div>
+          <div className="border-border-default/60 flex-grow border-t"></div>
         </div>
 
         <button
@@ -257,7 +255,7 @@ export default function SignupPage() {
           onClick={() => {
             console.log("Google Auth Placeholder");
           }}
-          className="w-full flex items-center justify-center gap-3 rounded-[6px] border border-border-default bg-[#0a0a0b] py-3 text-[13px] text-text-primary font-medium hover:bg-bg-secondary hover:border-text-muted transition-colors duration-200 cursor-pointer"
+          className="border-border-default text-text-primary hover:bg-bg-secondary hover:border-text-muted flex w-full cursor-pointer items-center justify-center gap-3 rounded-[6px] border bg-[#0a0a0b] py-3 text-[13px] font-medium transition-colors duration-200"
         >
           <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
             <path
@@ -283,18 +281,16 @@ export default function SignupPage() {
 
       {/* Redirect footer */}
       <div className="text-center">
-        <p className="text-[13px] text-text-secondary">
+        <p className="text-text-secondary text-[13px]">
           Already have an account?{' '}
-          <Link
-            href="/login"
-            className="text-gold underline hover:text-gold-hover font-semibold"
-          >
+          <Link href="/login" className="text-gold hover:text-gold-hover font-semibold underline">
             Login
           </Link>
         </p>
 
-        <p className="mt-4 text-[10px] text-text-muted leading-relaxed max-w-[320px] mx-auto">
-          By registering, you agree to our Terms of Service & Privacy Policy.<br />
+        <p className="text-text-muted mx-auto mt-4 max-w-[320px] text-[10px] leading-relaxed">
+          By registering, you agree to our Terms of Service & Privacy Policy.
+          <br />
           Compliant with IT Act 2000.
         </p>
       </div>

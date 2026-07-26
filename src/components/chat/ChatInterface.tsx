@@ -292,10 +292,14 @@ function MessageBubble({
     );
   }
 
-  if (message.role === 'assistant' && message.mode === 'compliance' && message.content.startsWith('## COMPLIANCE AUDIT')) {
+  if (
+    message.role === 'assistant' &&
+    message.mode === 'compliance' &&
+    message.content.startsWith('## COMPLIANCE AUDIT')
+  ) {
     return (
       <motion.div
-        className="w-full flex justify-start"
+        className="flex w-full justify-start"
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
@@ -305,10 +309,14 @@ function MessageBubble({
     );
   }
 
-  if (message.role === 'assistant' && message.mode === 'case' && message.content.startsWith('## Legal Case Analysis')) {
+  if (
+    message.role === 'assistant' &&
+    message.mode === 'case' &&
+    message.content.startsWith('## Legal Case Analysis')
+  ) {
     return (
       <motion.div
-        className="w-full flex justify-start"
+        className="flex w-full justify-start"
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
@@ -337,10 +345,7 @@ function MessageBubble({
           >
             {mode.icon}
           </div>
-          <span
-            className="font-mono text-[11px] tracking-[0.5px]"
-            style={{ color: mode.color }}
-          >
+          <span className="font-mono text-[11px] tracking-[0.5px]" style={{ color: mode.color }}>
             LEXAI · {mode.label.toUpperCase()}
           </span>
         </div>
@@ -568,7 +573,7 @@ function MessageBubble({
 
           {/* Confidence */}
           {message.confidence && !message.isStreaming && (
-            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-text-muted">
+            <div className="text-text-muted mt-2 flex items-center gap-1.5 text-[11px]">
               <span
                 className="inline-block h-1.5 w-1.5 rounded-full"
                 style={{
@@ -580,17 +585,15 @@ function MessageBubble({
                         : '#BE7B7B',
                 }}
               />
-              {message.confidence.charAt(0).toUpperCase() +
-                message.confidence.slice(1)}{' '}
-              confidence · Citations verified
+              {message.confidence.charAt(0).toUpperCase() + message.confidence.slice(1)} confidence
+              · Citations verified
             </div>
           )}
 
           {/* Disclaimer */}
           {!message.isStreaming && (
-            <div className="mt-3 border-t border-[#252528] pt-2.5 text-[11px] italic text-text-muted">
-              ℹ️ Not legal advice. Consult a qualified advocate for your
-              specific matter.
+            <div className="text-text-muted mt-3 border-t border-[#252528] pt-2.5 text-[11px] italic">
+              ℹ️ Not legal advice. Consult a qualified advocate for your specific matter.
             </div>
           )}
         </div>
@@ -615,10 +618,8 @@ function EmptyState({ mode }: { mode: ChatMode }) {
       >
         {data.icon}
       </div>
-      <h2 className="mt-4 font-serif text-[22px] font-semibold text-text-primary">
-        {data.label}
-      </h2>
-      <p className="mt-2 max-w-[340px] text-center text-[13px] leading-relaxed text-text-secondary">
+      <h2 className="text-text-primary mt-4 font-serif text-[22px] font-semibold">{data.label}</h2>
+      <p className="text-text-secondary mt-2 max-w-[340px] text-center text-[13px] leading-relaxed">
         {data.description}
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -626,7 +627,7 @@ function EmptyState({ mode }: { mode: ChatMode }) {
           <button
             key={prompt}
             onClick={() => dispatch(setInputValue(prompt))}
-            className="rounded-full border border-border-default bg-bg-secondary px-3 py-1.5 text-[11px] text-text-muted transition-colors hover:border-[#C9A84C99] hover:text-gold"
+            className="border-border-default bg-bg-secondary text-text-muted hover:text-gold rounded-full border px-3 py-1.5 text-[11px] transition-colors hover:border-[#C9A84C99]"
           >
             {prompt}
           </button>
@@ -640,31 +641,29 @@ function EmptyState({ mode }: { mode: ChatMode }) {
 function PaywallCard() {
   return (
     <motion.div
-      className="mx-auto max-w-lg rounded-2xl border-2 border-gold-border bg-bg-secondary p-6"
+      className="border-gold-border bg-bg-secondary mx-auto max-w-lg rounded-2xl border-2 p-6"
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
     >
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-subtle">
+        <div className="bg-gold-subtle flex h-10 w-10 items-center justify-center rounded-xl">
           <CreditCard size={20} strokeWidth={1.5} className="text-gold" />
         </div>
         <div>
-          <h3 className="text-[14px] font-semibold text-text-primary">
-            Query limit reached
-          </h3>
-          <p className="text-[12px] text-text-secondary">
+          <h3 className="text-text-primary text-[14px] font-semibold">Query limit reached</h3>
+          <p className="text-text-secondary text-[12px]">
             You&apos;ve used all your free queries this month
           </p>
         </div>
       </div>
-      <p className="mt-3 text-[13px] leading-relaxed text-text-secondary">
-        Upgrade your plan to continue using LexAI with unlimited queries, contract
-        drafting, voice input, and more.
+      <p className="text-text-secondary mt-3 text-[13px] leading-relaxed">
+        Upgrade your plan to continue using LexAI with unlimited queries, contract drafting, voice
+        input, and more.
       </p>
       <Link
         href="/pricing?from=limit"
-        className="mt-4 flex items-center justify-center gap-2 rounded-[10px] bg-gold px-5 py-2.5 text-[13px] font-medium text-bg-primary transition-colors hover:bg-gold-hover"
+        className="bg-gold text-bg-primary hover:bg-gold-hover mt-4 flex items-center justify-center gap-2 rounded-[10px] px-5 py-2.5 text-[13px] font-medium transition-colors"
       >
         Upgrade Plan
         <CreditCard size={14} strokeWidth={1.5} />
@@ -679,8 +678,9 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((s) => s.auth);
-  const { messages, isStreaming, inputValue, conversations, activeConversationId } =
-    useAppSelector((s) => s.chat);
+  const { messages, isStreaming, inputValue, conversations, activeConversationId } = useAppSelector(
+    (s) => s.chat
+  );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -917,11 +917,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
   };
 
-  const isAtLimit = useMemo(
-    () =>
-      user ? user.queriesUsed >= user.queriesLimit : false,
-    [user]
-  );
+  const isAtLimit = useMemo(() => (user ? user.queriesUsed >= user.queriesLimit : false), [user]);
 
   // Send message with simulated streaming
   const sendMessage = useCallback(async (overrideContent?: string, overrideComplianceData?: any) => {
@@ -929,14 +925,14 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     if (!content && mode !== 'compliance') return;
     if (isStreaming) return;
 
-    // Check limit
-    if (isAtLimit) return;
+      // Check limit
+      if (isAtLimit) return;
 
-    // Clear input
-    dispatch(setInputValue(''));
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
+      // Clear input
+      dispatch(setInputValue(''));
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
 
     const tempConvId = activeConversationId || `temp_${Date.now()}`;
 
@@ -956,7 +952,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       createdAt: new Date().toISOString(),
     };
 
-    dispatch(addMessage(userMsg));
+      dispatch(addMessage(userMsg));
 
     // If no active conversation, create a temporary one in store
     if (!activeConversationId) {
@@ -1000,8 +996,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       createdAt: new Date().toISOString(),
     };
 
-    dispatch(addMessage(assistantMsg));
-    dispatch(setIsStreaming(true));
+      dispatch(addMessage(assistantMsg));
+      dispatch(setIsStreaming(true));
 
     try {
       let response;
@@ -1198,12 +1194,11 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     
   return (
     <div className="flex h-full flex-col">
-      {/* Secondary nav tabs */}
-      <SecondaryNav activeMode={mode} />
-
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-6 lg:px-0">
-        <div className={`mx-auto space-y-5 transition-all duration-300 ${mode === 'compliance' || mode === 'case' ? 'max-w-[1000px]' : 'max-w-[720px]'}`}>
+        <div
+          className={`mx-auto space-y-5 transition-all duration-300 ${mode === 'compliance' || mode === 'case' ? 'max-w-[1000px]' : 'max-w-[720px]'}`}
+        >
           {messages.length === 0 && !isStreaming ? (
             <div className="space-y-8">
               <EmptyState mode={mode} />
@@ -1314,7 +1309,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
               {/* Retry card */}
               {retryMessageId && (
                 <div className="flex justify-start">
-                  <div className="rounded-xl border border-error/30 bg-error/5 px-4 py-3 text-[13px] text-text-secondary">
+                  <div className="border-error/30 bg-error/5 text-text-secondary rounded-xl border px-4 py-3 text-[13px]">
                     Something went wrong.{' '}
                     <button
                       onClick={() => {
@@ -1336,6 +1331,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
           )}
           <div ref={messagesEndRef} />
         </div>
+        {/* Secondary nav tabs */}
       </div>
 
       {/* Input bar */}
@@ -1478,7 +1474,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
           </AnimatePresence>
 
           <div
-            className={`flex items-end gap-2.5 rounded-[14px] border bg-bg-secondary px-3.5 py-2.5 transition-colors duration-200 ${
+            className={`bg-bg-secondary flex items-end gap-2.5 rounded-[14px] border px-3.5 py-2.5 transition-colors duration-200 ${
               inputValue.trim() ? 'border-gold-border' : 'border-border-default'
             }`}
           >
@@ -1559,13 +1555,13 @@ function ChatContent({ mode }: { mode: ChatMode }) {
               }
               disabled={isAtLimit}
               rows={1}
-              className="flex-1 resize-none bg-transparent text-[13px] text-text-primary placeholder:text-text-disabled outline-none disabled:opacity-50"
+              className="text-text-primary placeholder:text-text-disabled flex-1 resize-none bg-transparent text-[13px] outline-none disabled:opacity-50"
               style={{ maxHeight: '120px' }}
             />
 
             {/* Voice button (placeholder) */}
             <button
-              className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] bg-bg-tertiary text-info transition-colors hover:bg-bg-elevated"
+              className="bg-bg-tertiary text-info hover:bg-bg-elevated flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] transition-colors"
               title="Voice input (Pro feature)"
             >
               <Mic size={16} strokeWidth={1.5} />
@@ -1617,19 +1613,16 @@ function ChatContent({ mode }: { mode: ChatMode }) {
               disabled={!canSend}
               className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] transition-all duration-200 ${
                 canSend
-                  ? 'bg-gradient-to-br from-gold to-gold/80 text-bg-primary'
+                  ? 'from-gold to-gold/80 text-bg-primary bg-gradient-to-br'
                   : 'bg-bg-tertiary text-text-disabled'
               }`}
             >
-              <Send
-                size={16}
-                strokeWidth={1.5}
-              />
+              <Send size={16} strokeWidth={1.5} />
             </button>
           </div>
 
           {/* Footer text */}
-          <div className="mt-2 flex items-center justify-between text-[10px] text-text-disabled">
+          <div className="text-text-disabled mt-2 flex items-center justify-between text-[10px]">
             <span>Powered by Claude · Indian Law Jurisdiction</span>
             <span>Enter to send · Shift+Enter for newline</span>
           </div>
@@ -1666,7 +1659,13 @@ interface ChatInterfaceProps {
 
 export default function ChatInterface({ mode }: ChatInterfaceProps) {
   return (
-    <Suspense fallback={<div className="h-full flex items-center justify-center text-text-muted text-[13px]">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="text-text-muted flex h-full items-center justify-center text-[13px]">
+          Loading...
+        </div>
+      }
+    >
       <ChatContent mode={mode} />
     </Suspense>
   );
