@@ -178,7 +178,11 @@ function MessageBubble({
       const response = await api.patch(`/compliance/${reportId}/items/${itemId}`, {
         isCompleted: newStatus
       });
-      if (response.data && response.data.status === 'success') {
+      if (response.data && (response.data.status === 'success' || response.data.success)) {
+        const updatedData = response.data.data;
+        if (updatedData) {
+          setItems(prev => prev.map(item => item.id === itemId ? { ...item, ...updatedData } : item));
+        }
         toast.success(newStatus ? 'Marked as completed' : 'Marked as incomplete');
       } else {
         throw new Error('Update failed');
@@ -204,7 +208,11 @@ function MessageBubble({
         isCompleted: currentStatus,
         notes: notesValue
       });
-      if (response.data && response.data.status === 'success') {
+      if (response.data && (response.data.status === 'success' || response.data.success)) {
+        const updatedData = response.data.data;
+        if (updatedData) {
+          setItems(prev => prev.map(item => item.id === itemId ? { ...item, ...updatedData } : item));
+        }
         toast.success('Notes updated successfully');
       } else {
         throw new Error('Update failed');
@@ -223,8 +231,8 @@ function MessageBubble({
 
     try {
       const res = await api.post(`/compliance/${reportId}/export/pdf`);
-      if (res.data && res.data.status === 'success') {
-        toast.loading('Generating PDF. Your download will start automatically once ready...', { id: `pdf-export-${reportId}` });
+      if (res.data && (res.data.status === 'success' || res.data.success || res.status === 202)) {
+        toast.loading(res.data.message || 'PDF generation started. It will be available shortly.', { id: `pdf-export-${reportId}` });
 
         let pollCount = 0;
         const interval = setInterval(async () => {
@@ -238,7 +246,7 @@ function MessageBubble({
 
           try {
             const reportRes = await api.get(`/compliance/${reportId}`);
-            if (reportRes.data && reportRes.data.status === 'success' && reportRes.data.data?.pdfUrl) {
+            if (reportRes.data && (reportRes.data.status === 'success' || reportRes.data.success) && reportRes.data.data?.pdfUrl) {
               clearInterval(interval);
               setIsExporting(false);
               toast.success('PDF generated successfully! Starting download...', { id: `pdf-export-${reportId}` });
@@ -304,7 +312,7 @@ function MessageBubble({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
       >
-        <ComplianceDashboard />
+        <ComplianceDashboard data={message as any} />
       </motion.div>
     );
   }
@@ -452,18 +460,51 @@ function MessageBubble({
                 </h4>
                 <div className="flex items-center gap-2.5 flex-shrink-0 text-text-muted group-hover:text-gold transition-colors">
                   {reportId && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePdfExport();
-                      }}
-                      disabled={isExporting}
-                      className="p-1 rounded hover:bg-gold/10 transition-colors flex items-center gap-1 text-[11px] font-medium text-gold disabled:opacity-50"
-                      title="Export and Download PDF Report"
-                    >
-                      <Download size={13} className={isExporting ? 'animate-bounce' : ''} />
-                      {isExporting ? 'Exporting...' : 'Export PDF'}
-                    </button>
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePdfExport();
+                        }}
+                        disabled={isExporting}
+                        className="p-1 rounded hover:bg-gold/10 transition-colors flex items-center gap-1 text-[11px] font-medium text-gold disabled:opacity-50"
+                        title="Export and Download PDF Report"
+                      >
+                        <Download size={13} className={isExporting ? 'animate-bounce' : ''} />
+                        {isExporting ? 'Exporting...' : 'Export PDF'}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const htmlString = `
+                            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                            <head><meta charset='utf-8'/><title>LexAI Compliance Report</title></head>
+                            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                              <h1 style="color: #c9a84c;">LexAI — Compliance Audit Report</h1>
+                              <div>${formatMarkdown(message.content || '')}</div>
+                              <hr/>
+                              <p><em>⚖️ Generated by LexAI Sovereign Intelligence. Confidential Corporate Document.</em></p>
+                            </body>
+                            </html>
+                          `;
+                          const blob = new Blob(['\ufeff' + htmlString], { type: 'application/msword' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `LexAI_Compliance_Report_${Date.now()}.docx`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                          toast.success('Downloaded DOCX Report!');
+                        }}
+                        className="p-1 rounded hover:bg-gold/10 transition-colors flex items-center gap-1 text-[11px] font-medium text-gold"
+                        title="Export and Download DOCX Word Document"
+                      >
+                        <FileText size={13} />
+                        Export DOCX
+                      </button>
+                    </>
                   )}
                   {isChecklistExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
@@ -838,8 +879,45 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       setSelectedModel('gemini-2.0-flash');
     }
 
+    const urlReportId = searchParams.get('reportId');
     const urlConvId = searchParams.get('conversationId');
-    if (urlConvId) {
+
+    if (urlReportId) {
+      dispatch(setActiveConversation(urlReportId));
+      const fetchComplianceDetails = async () => {
+        try {
+          const res = await api.get(`/compliance/${urlReportId}`);
+          const data = res.data?.data || res.data;
+          if (data) {
+            const userMsg: ChatMessage = {
+              id: `msg_${urlReportId}_user`,
+              conversationId: data.id || urlReportId,
+              role: 'user',
+              content: `Compliance audit for ${data.businessType || 'business'} in ${data.state || 'India'}`,
+              mode: 'compliance',
+              createdAt: data.createdAt || new Date().toISOString(),
+            };
+
+            const assistantMsg: ChatMessage = {
+              id: data.id || urlReportId,
+              conversationId: data.id || urlReportId,
+              role: 'assistant',
+              content: data.response || data.summary || `## COMPLIANCE AUDIT FOR ${data.businessType || 'BUSINESS'}\n\nCompliance checklist compiled under Companies Act 2013 & GST rules.`,
+              mode: 'compliance',
+              createdAt: data.createdAt || new Date().toISOString(),
+            } as any;
+
+            (assistantMsg as any).reportId = data.id || urlReportId;
+            (assistantMsg as any).complianceItems = data.items || [];
+
+            dispatch(setMessages([userMsg, assistantMsg]));
+          }
+        } catch (err) {
+          console.error('Failed to load compliance report details via GET /api/v1/compliance/:reportId:', err);
+        }
+      };
+      fetchComplianceDetails();
+    } else if (urlConvId) {
       dispatch(setActiveConversation(urlConvId));
 
       if (urlConvId.startsWith('conv_')) {
@@ -1202,77 +1280,6 @@ function ChatContent({ mode }: { mode: ChatMode }) {
           {messages.length === 0 && !isStreaming ? (
             <div className="space-y-8">
               <EmptyState mode={mode} />
-              
-              {mode === 'compliance' && complianceReports.length > 0 && (
-                <div className="mt-8 border-t border-border-default/30 pt-8 space-y-4 max-w-[720px] mx-auto">
-                  <h3 className="font-serif text-[18px] font-semibold text-text-primary">Recent Compliance Audits</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {complianceReports.map((report) => (
-                      <div 
-                        key={report.id}
-                        onClick={() => {
-                          const profile = {
-                            businessType: report.businessType || '',
-                            state: report.state || '',
-                            headcount: report.headcount || 0,
-                            revenueBracket: report.revenueBracket || '',
-                            hasUserData: !!report.hasUserData,
-                            isFood: !!report.isFood,
-                            isFintech: !!report.isFintech
-                          };
-                          setComplianceData(profile);
-                          sendMessage('', profile);
-                        }}
-                        className="p-4 bg-[#141416] border border-border-default hover:border-gold/50 rounded-xl cursor-pointer transition-all duration-200 group flex items-start justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300"
-                      >
-                        <div className="space-y-1 flex-1">
-                          <h4 className="text-[13px] font-semibold text-text-primary group-hover:text-gold transition-colors">
-                            {report.businessType} Audit
-                          </h4>
-                          <p className="text-[11px] text-text-secondary">
-                            State: {report.state} · {report.totalItems || 0} obligations
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-[10px] bg-gold/10 text-gold border border-gold-border/20 px-2 py-0.5 rounded font-medium">
-                            {report.completedCount || 0}/{report.totalItems || 0} Done
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent loading report
-                              handleRecentPdfExport(report.id);
-                            }}
-                            disabled={!!exportingReports[report.id]}
-                            className="p-1.5 rounded text-text-disabled hover:text-gold hover:bg-gold/10 transition-colors disabled:opacity-50"
-                            title="Export and Download PDF Report"
-                          >
-                            <Download size={13} className={exportingReports[report.id] ? 'animate-bounce' : ''} />
-                          </button>
-                          <button
-                            onClick={async (e) => {
-                              e.stopPropagation(); // Prevent loading report
-                              if (confirm('Are you sure you want to permanently delete this compliance audit report?')) {
-                                try {
-                                  await api.delete(`/compliance/${report.id}`);
-                                  setComplianceReports(prev => prev.filter(r => r.id !== report.id));
-                                  toast.success('Report deleted successfully');
-                                } catch (err) {
-                                  console.error('Failed to delete compliance report:', err);
-                                  toast.error('Failed to delete report. Please try again.');
-                                }
-                              }
-                            }}
-                            className="p-1.5 rounded text-text-disabled hover:text-error hover:bg-error/10 transition-colors"
-                            title="Delete permanently"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           ) : (
             <>
@@ -1632,25 +1639,35 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   );
 }
 
-//  Simple markdown formatter 
+// Simple markdown formatter
 function formatMarkdown(text: string): string {
   if (!text) return '';
-  return text
+  let html = text
     .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/\[URGENT\]/g, '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#BE7B7B1A] border border-[#BE7B7B66] text-[#BE7B7B] mr-1.5 font-sans">URGENT</span>')
     .replace(/\[THIS_QUARTER\]/g, '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#E8C96A1A] border border-[#E8C96A44] text-[#E8C96A] mr-1.5 font-sans font-medium">THIS QUARTER</span>')
-    .replace(/^### (.+)/gm, '<h4 class="text-[13px] font-semibold text-gold mt-3 mb-1">$1</h4>')
-    .replace(/^## (.+)/gm, '<h3 class="text-[14px] font-semibold text-gold mt-4 mb-1.5">$1</h3>')
+    .replace(/^### (.+)/gm, '<h4 class="text-[13px] font-semibold text-gold mt-2.5 mb-1">$1</h4>')
+    .replace(/^## (.+)/gm, '<h3 class="text-[14px] font-semibold text-gold mt-3 mb-1">$1</h3>')
     .replace(/\*\*(.+?)\*\*/g, '<strong class="text-text-primary font-medium">$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/^› (.+)$/gm, '<div class="flex gap-1.5 my-0.5"><span class="text-gold flex-shrink-0">›</span><span>$1</span></div>')
     .replace(/^\d+\. (.+)$/gm, '<div class="flex gap-2 my-0.5"><span class="text-text-muted flex-shrink-0">•</span><span>$1</span></div>')
     .replace(/^[-*] (.+)$/gm, '<div class="flex gap-2 my-0.5"><span class="text-text-muted flex-shrink-0">•</span><span>$1</span></div>')
-    .replace(/\n\n/g, '<br/><br/>')
-    .replace(/\n/g, '<br/>');
+    .replace(/\n\n/g, '<br/>')
+    .replace(/\n/g, ' ');
+
+  // Strip unnecessary <br/> tags immediately before/after block elements
+  html = html
+    .replace(/(<\/h[34]>)\s*<br\s*\/?>/gi, '$1')
+    .replace(/<br\s*\/?>\s*(<h[34])/gi, '$1')
+    .replace(/(<\/div>)\s*<br\s*\/?>/gi, '$1')
+    .replace(/<br\s*\/?>\s*(<div)/gi, '$1');
+
+  return html;
 }
 
 interface ChatInterfaceProps {

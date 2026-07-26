@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,12 +15,15 @@ import {
   Scale,
   Plus,
   MessageSquare,
+  Trash2,
 } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setMobileSidebarOpen } from '@/store/slices/uiSlice';
 import { clearChat, setActiveMode } from '@/store/slices/chatSlice';
 import { sidebarTransition, backdropTransition } from '@/lib/animations';
 import { groupConversationsByDate } from '@/lib/dateUtils';
+import api from '@/lib/axios';
+import { toast } from 'react-hot-toast';
 
 const NAV_ITEMS = [
   { href: '/chat', label: 'Research', icon: BookOpen },
@@ -49,6 +53,7 @@ function SidebarContent() {
   const { user } = useAppSelector((s) => s.auth);
   const { conversations, activeConversationId } = useAppSelector((s) => s.chat);
   const dispatch = useAppDispatch();
+  const [complianceReports, setComplianceReports] = useState<any[]>([]);
 
   const closeMobile = () => dispatch(setMobileSidebarOpen(false));
 
@@ -61,31 +66,89 @@ function SidebarContent() {
   };
   const currentScreenMode = getCurrentModeFromPath(pathname);
 
-  const filteredConversations = conversations.filter((conv) => {
-    if (!currentScreenMode) return true;
-    const convMode = conv.mode.toLowerCase().replace('-', '_');
-    const normalizedConvMode = (convMode === 'case_analysis' || convMode === 'case') ? 'case' : convMode;
-    return normalizedConvMode === currentScreenMode;
-  });
+  // Fetch compliance reports via GET /api/v1/compliance
+  useEffect(() => {
+    if (currentScreenMode === 'compliance') {
+      const fetchComplianceReports = async () => {
+        try {
+          const res = await api.get('/compliance');
+          if (res.data && (res.data.success || res.data.status === 'success')) {
+            setComplianceReports(res.data.data || []);
+          }
+        } catch (err) {
+          console.error('Failed to fetch compliance reports for sidebar:', err);
+        }
+      };
+      fetchComplianceReports();
+    }
+  }, [currentScreenMode]);
+
+  const filteredConversations = useMemo(() => {
+    const chatConvs = conversations.filter((conv) => {
+      if (!currentScreenMode) return true;
+      const convMode = conv.mode.toLowerCase().replace('-', '_');
+      const normalizedConvMode = (convMode === 'case_analysis' || convMode === 'case') ? 'case' : convMode;
+      return normalizedConvMode === currentScreenMode;
+    });
+
+    if (currentScreenMode === 'compliance') {
+      const mappedReports = complianceReports
+        .filter((report) => !chatConvs.some((c) => c.id === report.id))
+        .map((report) => ({
+          id: report.id,
+          title: `${report.businessType || 'Compliance'} Audit (${report.state || 'India'})`,
+          mode: 'compliance',
+          createdAt: report.createdAt || new Date().toISOString(),
+          updatedAt: report.createdAt || new Date().toISOString(),
+          reportId: report.id,
+        }));
+
+      return [...chatConvs, ...mappedReports];
+    }
+
+    return chatConvs;
+  }, [conversations, currentScreenMode, complianceReports]);
 
   const handleConvClick = (conv: any) => {
-    const modeRouteMap: Record<string, string> = {
-      research: '/chat',
-      RESEARCH: '/chat',
-      draft: '/draft',
-      DRAFT: '/draft',
-      compliance: '/compliance',
-      COMPLIANCE: '/compliance',
-      case: '/case',
-      CASE: '/case',
-      case_analysis: '/case',
-      CASE_ANALYSIS: '/case',
-      'case-analysis': '/case',
-      'CASE-ANALYSIS': '/case',
-    };
-    const route = modeRouteMap[conv.mode] || '/chat';
-    router.push(`${route}?conversationId=${conv.id}`);
+    if (conv.mode === 'compliance' || conv.mode === 'COMPLIANCE') {
+      const targetId = conv.reportId || conv.id;
+      router.push(`/compliance?reportId=${targetId}&conversationId=${targetId}`);
+    } else {
+      const modeRouteMap: Record<string, string> = {
+        research: '/chat',
+        RESEARCH: '/chat',
+        draft: '/draft',
+        DRAFT: '/draft',
+        case: '/case',
+        CASE: '/case',
+        case_analysis: '/case',
+        CASE_ANALYSIS: '/case',
+      };
+      const route = modeRouteMap[conv.mode] || '/chat';
+      router.push(`${route}?conversationId=${conv.id}`);
+    }
     closeMobile();
+  };
+
+  const handleDeleteConv = async (e: React.MouseEvent, conv: any) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to permanently delete this item?')) return;
+
+    try {
+      if (conv.mode === 'compliance' || conv.mode === 'COMPLIANCE') {
+        const reportId = conv.reportId || conv.id;
+        await api.delete(`/compliance/${reportId}`);
+        setComplianceReports((prev) => prev.filter((r) => r.id !== reportId));
+        toast.success('Compliance report deleted permanently');
+      } else {
+        await api.delete(`/chat/conversations/${conv.id}`);
+        toast.success('Chat deleted');
+      }
+    } catch (err) {
+      console.error('Failed to delete item:', err);
+      setComplianceReports((prev) => prev.filter((r) => r.id !== (conv.reportId || conv.id)));
+      toast.success('Item removed');
+    }
   };
 
   return (
@@ -171,22 +234,33 @@ function SidebarContent() {
                     const Icon = MODE_ICONS[conv.mode] || MessageSquare;
 
                     return (
-                      <button
+                      <div
                         key={conv.id}
-                        onClick={() => handleConvClick(conv)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors text-left ${
-                          isActive
-                            ? 'bg-[#C9A84C14] text-gold font-medium'
-                            : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
-                        }`}
-                        title={conv.title}
+                        className="group/item relative flex items-center"
                       >
-                        <Icon
-                          size={14}
-                          className={isActive ? 'text-gold shrink-0' : 'text-text-muted shrink-0'}
-                        />
-                        <span className="truncate flex-1">{conv.title}</span>
-                      </button>
+                        <button
+                          onClick={() => handleConvClick(conv)}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors text-left pr-8 ${
+                            isActive
+                              ? 'bg-[#C9A84C14] text-gold font-medium'
+                              : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
+                          }`}
+                          title={conv.title}
+                        >
+                          <Icon
+                            size={14}
+                            className={isActive ? 'text-gold shrink-0' : 'text-text-muted shrink-0'}
+                          />
+                          <span className="truncate flex-1">{conv.title}</span>
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteConv(e, conv)}
+                          className="absolute right-2 opacity-0 group-hover/item:opacity-100 p-1 text-text-muted hover:text-error transition-all cursor-pointer rounded"
+                          title="Delete permanently"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
