@@ -28,11 +28,12 @@ const documentsSlice = createSlice({
     },
     updateDocumentContent(
       state,
-      action: PayloadAction<{ id: string; content: string }>
+      action: PayloadAction<{ id: string; content?: string; title?: string }>
     ) {
       const doc = state.documents.find((d) => d.id === action.payload.id);
       if (doc) {
-        doc.content = action.payload.content;
+        if (action.payload.content !== undefined) doc.content = action.payload.content;
+        if (action.payload.title !== undefined) doc.title = action.payload.title;
         doc.updatedAt = new Date().toISOString();
       }
     },
@@ -42,10 +43,7 @@ const documentsSlice = createSlice({
         state.activeDocumentId = state.documents[0]?.id ?? null;
       }
     },
-    setSaveStatus(
-      state,
-      action: PayloadAction<'idle' | 'saving' | 'saved' | 'error'>
-    ) {
+    setSaveStatus(state, action: PayloadAction<'idle' | 'saving' | 'saved' | 'error'>) {
       state.saveStatus = action.payload;
     },
   },

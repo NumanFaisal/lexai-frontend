@@ -35,9 +35,7 @@ function DocumentsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
-  const { documents, activeDocumentId, saveStatus } = useAppSelector(
-    (s) => s.documents
-  );
+  const { documents, activeDocumentId, saveStatus } = useAppSelector((s) => s.documents);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newDocDescription, setNewDocDescription] = useState('');
@@ -49,10 +47,20 @@ function DocumentsContent() {
   const getDocumentTags = (doc: DocType) => {
     const titleLower = doc.title.toLowerCase();
     if (titleLower.includes('nda') || titleLower.includes('disclosure')) {
-      return { category: 'NDA', tags: ['NDA', 'Indian Contract Act 1872', 'Delhi Jurisdiction', 'v2'] };
+      return {
+        category: 'NDA',
+        tags: ['NDA', 'Indian Contract Act 1872', 'Delhi Jurisdiction', 'v2'],
+      };
     }
-    if (titleLower.includes('employment') || titleLower.includes('services') || titleLower.includes('contract')) {
-      return { category: 'Contract', tags: ['Employment', 'Companies Act 2013', 'New Delhi', 'v1'] };
+    if (
+      titleLower.includes('employment') ||
+      titleLower.includes('services') ||
+      titleLower.includes('contract')
+    ) {
+      return {
+        category: 'Contract',
+        tags: ['Employment', 'Companies Act 2013', 'New Delhi', 'v1'],
+      };
     }
     if (titleLower.includes('gst') || titleLower.includes('compliance')) {
       return { category: 'Compliance', tags: ['GST', 'Finance Act 2025', 'All India', 'v1'] };
@@ -71,10 +79,12 @@ function DocumentsContent() {
     const currentDoc = documents.find((d) => d.id === activeDocumentId);
     if (currentDoc) {
       const addedText = `\n\n## AI REVISION: ${revisionQuery}\n\n[LexAI has automatically revised this section based on your prompt: "${revisionQuery}". Under the applicable Indian legal regulations, these terms have been adapted to protect the parties' interests and ensure full compliance.]\n\n1. The parties agree that this clause shall be binding under the local jurisdiction of India.\n2. Both parties represent that they have full authority to execute these amendments.`;
-      dispatch(updateDocumentContent({
-        id: activeDocumentId,
-        content: currentDoc.content + addedText
-      }));
+      dispatch(
+        updateDocumentContent({
+          id: activeDocumentId,
+          content: currentDoc.content + addedText,
+        })
+      );
       dispatch(setSaveStatus('saved'));
       toast.success('Document revised by LexAI');
       setRevisionQuery('');
@@ -170,15 +180,13 @@ function DocumentsContent() {
   return (
     <div className="flex h-full">
       {/* Left: Document list */}
-      <div className="w-[300px] flex-shrink-0 border-r border-border-default bg-bg-secondary overflow-y-auto hidden md:block">
+      <div className="border-border-default bg-bg-secondary hidden w-[300px] flex-shrink-0 overflow-y-auto border-r md:block">
         <div className="p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-[14px] font-semibold text-text-primary">
-              Documents
-            </h2>
+            <h2 className="text-text-primary text-[14px] font-semibold">Documents</h2>
             <button
               onClick={() => setShowNewForm(!showNewForm)}
-              className="flex items-center gap-1 rounded-md border border-border-default px-2 py-1 text-[11px] text-text-muted transition-colors hover:border-gold-border hover:text-gold"
+              className="border-border-default text-text-muted hover:border-gold-border hover:text-gold flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] transition-colors"
             >
               <Plus size={14} strokeWidth={1.5} />
               New
@@ -187,26 +195,22 @@ function DocumentsContent() {
 
           {/* New document form */}
           {showNewForm && (
-            <div className="mt-3 rounded-xl border border-gold-border bg-bg-primary p-3">
+            <div className="border-gold-border bg-bg-primary mt-3 rounded-xl border p-3">
               <textarea
                 value={newDocDescription}
                 onChange={(e) => setNewDocDescription(e.target.value)}
                 placeholder="Describe the document you need..."
                 rows={3}
-                className="w-full resize-none rounded-lg bg-transparent text-[12px] text-text-primary placeholder:text-text-disabled outline-none"
+                className="text-text-primary placeholder:text-text-disabled w-full resize-none rounded-lg bg-transparent text-[12px] outline-none"
               />
               <button
                 onClick={handleNewDocument}
                 disabled={!newDocDescription.trim() || isGenerating}
-                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-gold px-3 py-1.5 text-[12px] font-medium text-bg-primary disabled:opacity-40"
+                className="bg-gold text-bg-primary mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium disabled:opacity-40"
               >
                 {isGenerating ? (
                   <>
-                    <Loader2
-                      size={14}
-                      strokeWidth={1.5}
-                      className="animate-spin"
-                    />
+                    <Loader2 size={14} strokeWidth={1.5} className="animate-spin" />
                     Generating...
                   </>
                 ) : (
@@ -231,11 +235,11 @@ function DocumentsContent() {
             const isActive = doc.id === activeDocumentId;
             const modeData = MODE_DATA[doc.mode];
             const { category } = getDocumentTags(doc);
-            
+
             // Format status name nicely
             const statusLabel = doc.status.charAt(0).toUpperCase() + doc.status.slice(1);
             const isDraftStatus = doc.status === 'draft';
-            
+
             return (
               <motion.div
                 key={doc.id}
@@ -249,43 +253,51 @@ function DocumentsContent() {
                 }}
                 role="button"
                 tabIndex={0}
-                className={`p-4 border-b border-border-default/50 cursor-pointer transition-colors outline-none focus-visible:bg-hover-bg relative group ${
+                className={`border-border-default/50 focus-visible:bg-hover-bg group relative cursor-pointer border-b p-4 transition-colors outline-none ${
                   isActive
-                    ? 'bg-[#C9A84C]/5 border-l-2 border-gold'
+                    ? 'border-gold border-l-2 bg-[#C9A84C]/5'
                     : 'hover:bg-hover-bg border-l-2 border-l-transparent'
                 }`}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className={`font-medium text-[14px] leading-tight line-clamp-2 pr-4 transition-colors ${
-                    isActive ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'
-                  }`}>
+                <div className="mb-2 flex items-start justify-between">
+                  <h3
+                    className={`line-clamp-2 pr-4 text-[14px] leading-tight font-medium transition-colors ${
+                      isActive
+                        ? 'text-text-primary'
+                        : 'text-text-secondary group-hover:text-text-primary'
+                    }`}
+                  >
                     {doc.title}
                   </h3>
-                  
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete(doc.id);
                     }}
-                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 rounded p-1 text-text-muted hover:text-error transition-all"
+                    className="text-text-muted hover:text-error rounded p-1 opacity-0 transition-all group-hover:opacity-100 focus:opacity-100"
                   >
                     <Trash2 size={14} strokeWidth={1.5} />
                   </button>
                 </div>
-                
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="px-2 py-0.5 rounded-[4px] bg-[#1A1A1D] border border-border-default text-text-secondary text-[11px] font-medium">
+
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="border-border-default text-text-secondary rounded-[4px] border bg-[#1A1A1D] px-2 py-0.5 text-[11px] font-medium">
                     {category}
                   </span>
-                  <span className={`px-2 py-0.5 rounded-[4px] text-[11px] font-medium ${
-                    isDraftStatus
-                      ? 'bg-warning-amber/10 border border-warning-amber/20 text-[#E8C96A]'
-                      : 'bg-success-sage/10 border border-success-sage/20 text-[#7B9E87]'
-                  }`}>
+                  <span
+                    className={`rounded-[4px] px-2 py-0.5 text-[11px] font-medium ${
+                      isDraftStatus
+                        ? 'bg-warning-amber/10 border-warning-amber/20 border text-[#E8C96A]'
+                        : 'bg-success-sage/10 border-success-sage/20 border text-[#7B9E87]'
+                    }`}
+                  >
                     {statusLabel}
                   </span>
                 </div>
-                <p className="text-[11px] text-text-muted font-normal">Updated {formatDate(doc.updatedAt)}</p>
+                <p className="text-text-muted text-[11px] font-normal">
+                  Updated {formatDate(doc.updatedAt)}
+                </p>
               </motion.div>
             );
           })}
@@ -293,42 +305,40 @@ function DocumentsContent() {
       </div>
 
       {/* Right: Document editor */}
-      <div className="flex min-w-0 flex-1 flex-col bg-[#FAFAF8] text-[#1A1A1A] relative h-full overflow-hidden">
+      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[#FAFAF8] text-[#1A1A1A]">
         {activeDoc ? (
           <>
             {/* Editor header */}
-            <header className="h-[72px] bg-[#0D0D0F] border-b border-border-default flex items-center justify-between px-8 shrink-0">
+            <header className="border-border-default flex h-[72px] shrink-0 items-center justify-between border-b bg-[#0D0D0F] px-8">
               <div className="flex items-center gap-4">
-                <h1 className="text-[15px] font-semibold text-text-primary">
-                  {activeDoc.title}
-                </h1>
-                <div className="flex items-center gap-1.5 bg-[#1A1A1D] px-2.5 py-1 rounded-full border border-border-default">
+                <h1 className="text-text-primary text-[15px] font-semibold">{activeDoc.title}</h1>
+                <div className="border-border-default flex items-center gap-1.5 rounded-full border bg-[#1A1A1D] px-2.5 py-1">
                   {saveStatus === 'saving' || isRevising ? (
                     <>
-                      <Loader2 size={12} strokeWidth={1.5} className="animate-spin text-gold" />
-                      <span className="text-[11px] text-text-secondary">Saving...</span>
+                      <Loader2 size={12} strokeWidth={1.5} className="text-gold animate-spin" />
+                      <span className="text-text-secondary text-[11px]">Saving...</span>
                     </>
                   ) : (
                     <>
-                      <div className="w-1.5 h-1.5 rounded-full bg-success-sage"></div>
-                      <span className="text-[11px] text-text-secondary">Saved</span>
+                      <div className="bg-success-sage h-1.5 w-1.5 rounded-full"></div>
+                      <span className="text-text-secondary text-[11px]">Saved</span>
                     </>
                   )}
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => handleExport('word')}
                   disabled={exportingId === 'word'}
-                  className="px-4 py-2 border border-border-default text-[#E8E0D0] rounded-[9px] text-[13px] hover:bg-hover-bg transition-colors font-medium disabled:opacity-50"
+                  className="border-border-default hover:bg-hover-bg rounded-[9px] border px-4 py-2 text-[13px] font-medium text-[#E8E0D0] transition-colors disabled:opacity-50"
                 >
                   {exportingId === 'word' ? 'Exporting...' : 'Export Word'}
                 </button>
                 <button
                   onClick={() => handleExport('pdf')}
                   disabled={exportingId === 'pdf'}
-                  className="px-4 py-2 bg-gold text-bg-primary rounded-[9px] text-[13px] hover:bg-gold-hover transition-colors font-medium disabled:opacity-50"
+                  className="bg-gold text-bg-primary hover:bg-gold-hover rounded-[9px] px-4 py-2 text-[13px] font-medium transition-colors disabled:opacity-50"
                 >
                   {exportingId === 'pdf' ? 'Exporting...' : 'Export PDF'}
                 </button>
@@ -336,11 +346,11 @@ function DocumentsContent() {
             </header>
 
             {/* METADATA STRIP */}
-            <div className="bg-[#0D0D0F] border-b border-border-default py-2.5 px-8 flex gap-3 shrink-0">
+            <div className="border-border-default flex shrink-0 gap-3 border-b bg-[#0D0D0F] px-8 py-2.5">
               {getDocumentTags(activeDoc).tags.map((tag, idx) => (
                 <span
                   key={idx}
-                  className="font-mono text-[11px] text-text-secondary bg-[#111113] border border-border-default px-2 py-0.5 rounded-[4px]"
+                  className="text-text-secondary border-border-default rounded-[4px] border bg-[#111113] px-2 py-0.5 font-mono text-[11px]"
                 >
                   {tag}
                 </span>
@@ -348,34 +358,49 @@ function DocumentsContent() {
             </div>
 
             {/* DOCUMENT SURFACE & TOOLBAR */}
-            <div className="flex-1 flex flex-col relative overflow-hidden bg-[#FAFAF8]">
+            <div className="relative flex flex-1 flex-col overflow-hidden bg-[#FAFAF8]">
               {/* Formatting Toolbar */}
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.05)] rounded-lg px-2 py-1.5 flex items-center gap-1 z-10">
-                <button className="p-1.5 rounded hover:bg-gray-100 text-gray-700 transition-colors" title="Bold">
+              <div className="absolute top-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+                <button
+                  className="rounded p-1.5 text-gray-700 transition-colors hover:bg-gray-100"
+                  title="Bold"
+                >
                   <Bold size={15} strokeWidth={2.5} />
                 </button>
-                <button className="p-1.5 rounded hover:bg-gray-100 text-gray-700 transition-colors" title="Italic">
+                <button
+                  className="rounded p-1.5 text-gray-700 transition-colors hover:bg-gray-100"
+                  title="Italic"
+                >
                   <Italic size={15} strokeWidth={2.5} />
                 </button>
-                <button className="p-1.5 rounded hover:bg-gray-100 text-gray-700 transition-colors" title="Underline">
+                <button
+                  className="rounded p-1.5 text-gray-700 transition-colors hover:bg-gray-100"
+                  title="Underline"
+                >
                   <Underline size={15} strokeWidth={2.5} />
                 </button>
-                <div className="w-px h-4 bg-gray-300 mx-1"></div>
-                <button className="p-1.5 rounded hover:bg-gray-100 text-gray-700 font-serif font-bold text-[13px] leading-none" title="Heading 1">
+                <div className="mx-1 h-4 w-px bg-gray-300"></div>
+                <button
+                  className="rounded p-1.5 font-serif text-[13px] leading-none font-bold text-gray-700 hover:bg-gray-100"
+                  title="Heading 1"
+                >
                   H1
                 </button>
-                <button className="p-1.5 rounded hover:bg-gray-100 text-gray-700 transition-colors" title="Bulleted List">
+                <button
+                  className="rounded p-1.5 text-gray-700 transition-colors hover:bg-gray-100"
+                  title="Bulleted List"
+                >
                   <List size={15} strokeWidth={2.5} />
                 </button>
               </div>
 
               {/* Editor Content Area */}
-              <div className="flex-1 overflow-y-auto w-full pt-20 pb-32">
-                <div className="max-w-[580px] mx-auto px-6">
+              <div className="w-full flex-1 overflow-y-auto pt-20 pb-32">
+                <div className="mx-auto max-w-[580px] px-6">
                   <textarea
                     value={activeDoc.content}
                     onChange={(e) => handleContentChange(e.target.value)}
-                    className="w-full min-h-[700px] resize-none bg-transparent font-serif text-[14px] leading-[1.8] text-[#1A1A1A] outline-none placeholder:text-gray-400 animate-fadeIn"
+                    className="animate-fadeIn min-h-[700px] w-full resize-none bg-transparent font-serif text-[14px] leading-[1.8] text-[#1A1A1A] outline-none placeholder:text-gray-400"
                     spellCheck={false}
                     placeholder="Start typing your document..."
                   />
@@ -384,12 +409,12 @@ function DocumentsContent() {
             </div>
 
             {/* BOTTOM AI BAR */}
-            <div className="h-[80px] bg-[#0D0D0F] border-t border-border-default shrink-0 flex items-center px-8">
-              <div className="w-full max-w-[800px] mx-auto flex items-center gap-3">
-                <div className="flex-1 relative">
+            <div className="border-border-default flex h-[80px] shrink-0 items-center border-t bg-[#0D0D0F] px-8">
+              <div className="mx-auto flex w-full max-w-[800px] items-center gap-3">
+                <div className="relative flex-1">
                   <Sparkles
                     size={16}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gold"
+                    className="text-gold absolute top-1/2 left-4 -translate-y-1/2"
                   />
                   <input
                     value={revisionQuery}
@@ -401,7 +426,7 @@ function DocumentsContent() {
                       }
                     }}
                     disabled={isRevising}
-                    className="w-full bg-[#111113] border border-border-default rounded-lg py-3 pl-11 pr-4 text-text-primary text-[13px] placeholder:text-text-muted focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/30 transition-all disabled:opacity-50"
+                    className="border-border-default text-text-primary placeholder:text-text-muted focus:border-gold focus:ring-gold/30 w-full rounded-lg border bg-[#111113] py-3 pr-4 pl-11 text-[13px] transition-all focus:ring-1 focus:outline-none disabled:opacity-50"
                     placeholder="Ask AI to revise this document..."
                     type="text"
                   />
@@ -409,7 +434,7 @@ function DocumentsContent() {
                 <button
                   onClick={handleAIRevision}
                   disabled={!revisionQuery.trim() || isRevising}
-                  className="px-6 py-3 bg-gold text-[#0A0A0B] rounded-lg text-[13px] font-medium hover:bg-gold-hover active:scale-[0.98] transition-colors whitespace-nowrap disabled:opacity-40 animate-fadeIn"
+                  className="bg-gold hover:bg-gold-hover animate-fadeIn rounded-lg px-6 py-3 text-[13px] font-medium whitespace-nowrap text-[#0A0A0B] transition-colors active:scale-[0.98] disabled:opacity-40"
                 >
                   {isRevising ? 'Generating...' : 'Generate'}
                 </button>
@@ -419,12 +444,8 @@ function DocumentsContent() {
         ) : (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
-              <FileText
-                size={48}
-                strokeWidth={1}
-                className="mx-auto text-text-disabled"
-              />
-              <p className="mt-4 text-[14px] text-text-muted">
+              <FileText size={48} strokeWidth={1} className="text-text-disabled mx-auto" />
+              <p className="text-text-muted mt-4 text-[14px]">
                 Select a document or create a new one
               </p>
             </div>
@@ -437,7 +458,13 @@ function DocumentsContent() {
 
 export default function DocumentsPage() {
   return (
-    <Suspense fallback={<div className="h-full flex items-center justify-center text-text-muted text-[13px]">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="text-text-muted flex h-full items-center justify-center text-[13px]">
+          Loading...
+        </div>
+      }
+    >
       <DocumentsContent />
     </Suspense>
   );

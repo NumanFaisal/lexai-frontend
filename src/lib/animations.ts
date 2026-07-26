@@ -53,4 +53,3 @@ export const tabIndicator = {
   layoutId: 'tab-indicator',
   transition: { duration: 0.15, ease: 'easeOut' as const },
 };
-

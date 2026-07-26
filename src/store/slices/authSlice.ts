@@ -66,10 +66,7 @@ const authSlice = createSlice({
         state.user.queriesUsed += 1;
       }
     },
-    updateProfile(
-      state,
-      action: PayloadAction<Partial<Pick<User, 'username' | 'email'>>>
-    ) {
+    updateProfile(state, action: PayloadAction<Partial<Pick<User, 'username' | 'email'>>>) {
       if (state.user) {
         Object.assign(state.user, action.payload);
       }

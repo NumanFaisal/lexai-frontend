@@ -1,23 +1,18 @@
 'use client';
 
-import { useId } from "react";
+import { useId } from 'react';
 
 interface GavelLoaderProps {
   isThinking?: boolean;
 }
 
 export default function GavelLoader({ isThinking = true }: GavelLoaderProps) {
-  const uniqueId = useId().replace(/:/g, "");
+  const uniqueId = useId().replace(/:/g, '');
 
   return (
     <div className="gl-wrapper">
       {/* 3D WOOD/METAL GAVEL STRIKE — high-quality vector rendering */}
-      <svg
-        className="gl-svg"
-        viewBox="-3 -3 50 50"
-        xmlns="http://www.w3.org/2000/svg"
-        role="img"
-      >
+      <svg className="gl-svg" viewBox="-3 -3 50 50" xmlns="http://www.w3.org/2000/svg" role="img">
         <style>{`
           .gl-arm {
             transform-origin: 34px 34px;
@@ -137,7 +132,13 @@ export default function GavelLoader({ isThinking = true }: GavelLoaderProps) {
           </radialGradient>
 
           <filter id={`liftShadow-${uniqueId}`} x="-60%" y="-60%" width="220%" height="220%">
-            <feDropShadow dx="0" dy="1.3" stdDeviation="0.9" floodColor="#000000" floodOpacity="0.55" />
+            <feDropShadow
+              dx="0"
+              dy="1.3"
+              stdDeviation="0.9"
+              floodColor="#000000"
+              floodOpacity="0.55"
+            />
           </filter>
           <filter id={`groundBlur-${uniqueId}`} x="-80%" y="-200%" width="260%" height="500%">
             <feGaussianBlur stdDeviation="1" />
@@ -145,20 +146,58 @@ export default function GavelLoader({ isThinking = true }: GavelLoaderProps) {
         </defs>
 
         {/* ambient ground shadow */}
-        <ellipse className="gl-ground" cx="9" cy="42.5" rx="9.5" ry="1.6" fill="#000000" opacity="0.32" filter={`url(#groundBlur-${uniqueId})`} />
+        <ellipse
+          className="gl-ground"
+          cx="9"
+          cy="42.5"
+          rx="9.5"
+          ry="1.6"
+          fill="#000000"
+          opacity="0.32"
+          filter={`url(#groundBlur-${uniqueId})`}
+        />
 
         {/* impact flash */}
-        <circle className="gl-flash" cx="19.5" cy="34.5" r="5.5" fill={`url(#flashGrad-${uniqueId})`} />
+        <circle
+          className="gl-flash"
+          cx="19.5"
+          cy="34.5"
+          r="5.5"
+          fill={`url(#flashGrad-${uniqueId})`}
+        />
 
         {/* sound ripple rings */}
-        <ellipse className="gl-ring" cx="4" cy="33" rx="9" ry="1.8" fill="none" stroke="#f0cb67" strokeWidth="0.9" opacity="0" />
-        <ellipse className="gl-ring gl-ring2" cx="4" cy="33" rx="14" ry="2.6" fill="none" stroke="#f0cb67" strokeWidth="0.6" opacity="0" />
+        <ellipse
+          className="gl-ring"
+          cx="4"
+          cy="33"
+          rx="9"
+          ry="1.8"
+          fill="none"
+          stroke="#f0cb67"
+          strokeWidth="0.9"
+          opacity="0"
+        />
+        <ellipse
+          className="gl-ring gl-ring2"
+          cx="4"
+          cy="33"
+          rx="14"
+          ry="2.6"
+          fill="none"
+          stroke="#f0cb67"
+          strokeWidth="0.6"
+          opacity="0"
+        />
 
         {/* sound block — double-beveled wood and gold disc */}
         <g className="gl-block-top">
           {/* Gold Base Rim */}
           <ellipse cx="9" cy="39" rx="8" ry="2.8" fill={`url(#goldGrad-${uniqueId})`} />
-          <path d="M 1,39 A 8,2.8 0 0,0 17,39 L 17,40 A 8,2.8 0 0,1 1,40 Z" fill={`url(#goldGrad-${uniqueId})`} />
+          <path
+            d="M 1,39 A 8,2.8 0 0,0 17,39 L 17,40 A 8,2.8 0 0,1 1,40 Z"
+            fill={`url(#goldGrad-${uniqueId})`}
+          />
 
           {/* Sound Block Wood Side */}
           <rect x="1" y="34" width="16" height="5" rx="1" fill={`url(#blockSide-${uniqueId})`} />
@@ -167,15 +206,34 @@ export default function GavelLoader({ isThinking = true }: GavelLoaderProps) {
           <ellipse cx="9" cy="34" rx="8" ry="2.8" fill={`url(#blockTop-${uniqueId})`} />
 
           {/* Wear rings */}
-          <ellipse cx="9" cy="34" rx="5" ry="1.7" fill="none" stroke="#1d1006" strokeWidth="0.35" opacity="0.45" />
-          <ellipse cx="9" cy="34" rx="3.5" ry="1.2" fill="none" stroke="#ffe89e" strokeWidth="0.25" opacity="0.2" />
+          <ellipse
+            cx="9"
+            cy="34"
+            rx="5"
+            ry="1.7"
+            fill="none"
+            stroke="#1d1006"
+            strokeWidth="0.35"
+            opacity="0.45"
+          />
+          <ellipse
+            cx="9"
+            cy="34"
+            rx="3.5"
+            ry="1.2"
+            fill="none"
+            stroke="#ffe89e"
+            strokeWidth="0.25"
+            opacity="0.2"
+          />
         </g>
         <rect x="2.5" y="40" width="12" height="3" rx="1" fill="#160d05" />
 
         {/* gavel: head + collar + handle, pivoting around (34, 34) */}
         <g className="gl-arm" filter={`url(#liftShadow-${uniqueId})`}>
           {/* handle - contoured wood */}
-          <path d="M 31.5,15
+          <path
+            d="M 31.5,15
                    C 31,18 31.5,21 32,24
                    C 32.5,27 32,30 32,33
                    C 32,36 31.2,38 31.2,39
@@ -183,28 +241,67 @@ export default function GavelLoader({ isThinking = true }: GavelLoaderProps) {
                    C 35.8,38 35,36 35,33
                    C 35,30 34.5,27 35,24
                    C 35.5,21 36,18 35.5,15
-                   Z" fill={`url(#handleGrad-${uniqueId})`} />
+                   Z"
+            fill={`url(#handleGrad-${uniqueId})`}
+          />
 
           {/* handle specular gloss strip */}
           <path d="M 33.5,15 L 33.5,39" stroke="#ffffff" strokeWidth="0.3" opacity="0.15" />
 
           {/* Gold rings on handle */}
-          <rect x="31.8" y="20" width="3.4" height="1" rx="0.3" fill={`url(#goldGrad-${uniqueId})`} />
+          <rect
+            x="31.8"
+            y="20"
+            width="3.4"
+            height="1"
+            rx="0.3"
+            fill={`url(#goldGrad-${uniqueId})`}
+          />
           <rect x="32" y="32" width="3" height="1" rx="0.3" fill={`url(#goldGrad-${uniqueId})`} />
 
           {/* gold collar */}
-          <rect x="29.3" y="13.2" width="8.4" height="3.2" rx="1" fill={`url(#goldGrad-${uniqueId})`} />
+          <rect
+            x="29.3"
+            y="13.2"
+            width="8.4"
+            height="3.2"
+            rx="1"
+            fill={`url(#goldGrad-${uniqueId})`}
+          />
 
           {/* mallet head wood body */}
-          <rect x="24.5" y="6.5" width="19" height="10" rx="1.2" fill={`url(#headGrad-${uniqueId})`} />
+          <rect
+            x="24.5"
+            y="6.5"
+            width="19"
+            height="10"
+            rx="1.2"
+            fill={`url(#headGrad-${uniqueId})`}
+          />
 
           {/* gold head bands */}
           <rect x="26.2" y="6.5" width="1.8" height="10" fill={`url(#goldGrad-${uniqueId})`} />
           <rect x="39" y="6.5" width="1.8" height="10" fill={`url(#goldGrad-${uniqueId})`} />
 
           {/* ridge lines */}
-          <line x1="25.5" y1="6.5" x2="25.5" y2="16.5" stroke="#120701" strokeWidth="0.3" opacity="0.6" />
-          <line x1="41.5" y1="6.5" x2="41.5" y2="16.5" stroke="#120701" strokeWidth="0.3" opacity="0.6" />
+          <line
+            x1="25.5"
+            y1="6.5"
+            x2="25.5"
+            y2="16.5"
+            stroke="#120701"
+            strokeWidth="0.3"
+            opacity="0.6"
+          />
+          <line
+            x1="41.5"
+            y1="6.5"
+            x2="41.5"
+            y2="16.5"
+            stroke="#120701"
+            strokeWidth="0.3"
+            opacity="0.6"
+          />
 
           {/* specular highlight */}
           <rect x="25.5" y="7.5" width="16" height="1" rx="0.5" fill="#ffffff" opacity="0.35" />

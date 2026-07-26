@@ -38,7 +38,7 @@ export default function RootLayout({
       className={`${dmSans.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable} dark h-full`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col overflow-x-hidden bg-bg-primary text-text-primary">
+      <body className="bg-bg-primary text-text-primary flex min-h-full flex-col overflow-x-hidden">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

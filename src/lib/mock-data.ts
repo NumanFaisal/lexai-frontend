@@ -1,11 +1,4 @@
-import type {
-  User,
-  Conversation,
-  VaultItem,
-  Document,
-  ChatMessage,
-  PricingPlan,
-} from './types';
+import type { User, Conversation, VaultItem, Document, ChatMessage, PricingPlan } from './types';
 
 // ── Mock Users ─────────────────────────────────
 export const MOCK_USERS: Record<string, User & { password: string }> = {
@@ -56,8 +49,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     id: 'conv_1',
     title: 'Section 138 NI Act — Cheque Bounce',
     mode: 'research',
-    lastMessage:
-      'Section 138 of the Negotiable Instruments Act provides for penalties...',
+    lastMessage: 'Section 138 of the Negotiable Instruments Act provides for penalties...',
     messageCount: 4,
     createdAt: '2025-06-24T10:00:00Z',
     updatedAt: '2025-06-24T10:30:00Z',
@@ -75,8 +67,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     id: 'conv_3',
     title: 'GST Compliance — E-commerce',
     mode: 'compliance',
-    lastMessage:
-      'Based on your e-commerce business, here are the compliance requirements...',
+    lastMessage: 'Based on your e-commerce business, here are the compliance requirements...',
     messageCount: 3,
     createdAt: '2025-06-22T09:00:00Z',
     updatedAt: '2025-06-22T09:45:00Z',
@@ -85,8 +76,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     id: 'conv_4',
     title: 'Bail Application — Section 420 IPC',
     mode: 'case',
-    lastMessage:
-      'For a bail application under Section 420 IPC, the key considerations are...',
+    lastMessage: 'For a bail application under Section 420 IPC, the key considerations are...',
     messageCount: 5,
     createdAt: '2025-06-21T16:00:00Z',
     updatedAt: '2025-06-21T17:00:00Z',
@@ -160,8 +150,7 @@ The Negotiable Instruments (Amendment) Act, 2018 introduced provisions for **int
       id: 'msg_3',
       conversationId: 'conv_1',
       role: 'user',
-      content:
-        'What is the limitation period for filing a complaint under Section 138?',
+      content: 'What is the limitation period for filing a complaint under Section 138?',
       mode: 'research',
       createdAt: '2025-06-24T10:15:00Z',
     },
@@ -215,8 +204,7 @@ export const MOCK_VAULT_ITEMS: VaultItem[] = [
     id: 'vault_1',
     conversationId: 'conv_1',
     title: 'Section 138 NI Act — Cheque Bounce',
-    preview:
-      'Penalties under Section 138 including imprisonment up to two years and fine...',
+    preview: 'Penalties under Section 138 including imprisonment up to two years and fine...',
     mode: 'research',
     bookmarked: true,
     createdAt: '2025-06-24T10:30:00Z',
@@ -225,8 +213,7 @@ export const MOCK_VAULT_ITEMS: VaultItem[] = [
     id: 'vault_2',
     conversationId: 'conv_2',
     title: 'Employment Contract — IT Company',
-    preview:
-      'Standard employment agreement with clauses for IP assignment, non-compete...',
+    preview: 'Standard employment agreement with clauses for IP assignment, non-compete...',
     mode: 'draft',
     bookmarked: false,
     createdAt: '2025-06-23T15:00:00Z',
@@ -235,8 +222,7 @@ export const MOCK_VAULT_ITEMS: VaultItem[] = [
     id: 'vault_3',
     conversationId: 'conv_3',
     title: 'GST Compliance — E-commerce',
-    preview:
-      'Registration requirements, return filing schedule, input tax credit rules...',
+    preview: 'Registration requirements, return filing schedule, input tax credit rules...',
     mode: 'compliance',
     bookmarked: true,
     createdAt: '2025-06-22T09:45:00Z',
@@ -245,8 +231,7 @@ export const MOCK_VAULT_ITEMS: VaultItem[] = [
     id: 'vault_4',
     conversationId: 'conv_4',
     title: 'Bail Application — Section 420 IPC',
-    preview:
-      'Grounds for bail, surety requirements, conditions typically imposed...',
+    preview: 'Grounds for bail, surety requirements, conditions typically imposed...',
     mode: 'case',
     bookmarked: false,
     createdAt: '2025-06-21T17:00:00Z',
@@ -255,8 +240,7 @@ export const MOCK_VAULT_ITEMS: VaultItem[] = [
     id: 'vault_5',
     conversationId: 'conv_1',
     title: 'Property Transfer — Sale Deed',
-    preview:
-      'Requirements for valid sale deed under Transfer of Property Act 1882...',
+    preview: 'Requirements for valid sale deed under Transfer of Property Act 1882...',
     mode: 'research',
     bookmarked: true,
     createdAt: '2025-06-20T12:00:00Z',
@@ -265,167 +249,23 @@ export const MOCK_VAULT_ITEMS: VaultItem[] = [
     id: 'vault_6',
     conversationId: 'conv_2',
     title: 'Partnership Deed — LLP Conversion',
-    preview:
-      'Steps and compliance requirements for converting partnership to LLP...',
+    preview: 'Steps and compliance requirements for converting partnership to LLP...',
     mode: 'draft',
     bookmarked: false,
     createdAt: '2025-06-19T08:30:00Z',
   },
 ];
 
-// ── Mock Documents ─────────────────────────────
 export const MOCK_DOCUMENTS: Document[] = [
   {
-    id: 'doc_1',
-    title: 'Employment Agreement — TechCorp India Pvt. Ltd.',
-    description: 'Standard employment contract for software engineers',
-    content: `# EMPLOYMENT AGREEMENT
-
-**THIS EMPLOYMENT AGREEMENT** is made and entered into as of 15th June, 2025
-
-**BETWEEN:**
-
-**TechCorp India Pvt. Ltd.** (CIN: U74999DL2020PTC123456), a company incorporated under the Companies Act, 2013, having its registered office at Plot No. 42, Sector 62, Noida, Uttar Pradesh — 201301 (hereinafter referred to as the "Company")
-
-**AND:**
-
-**[Employee Name]**, residing at [Address] (hereinafter referred to as the "Employee")
-
----
-
-## 1. POSITION AND DUTIES
-
-1.1 The Company hereby employs the Employee as **Senior Software Engineer** in the Engineering Department.
-
-1.2 The Employee shall report to the Engineering Manager and perform all duties as may be reasonably assigned.
-
-1.3 The Employee shall devote their full working time, attention, and abilities to the performance of duties.
-
-## 2. COMPENSATION
-
-2.1 **Basic Salary**: ₹8,00,000 per annum (Rupees Eight Lakhs only)
-
-2.2 **House Rent Allowance**: ₹3,20,000 per annum
-
-2.3 **Special Allowance**: ₹2,40,000 per annum
-
-2.4 **Total CTC**: ₹15,60,000 per annum (Rupees Fifteen Lakhs Sixty Thousand only)
-
-## 3. PROBATION PERIOD
-
-3.1 The Employee shall be on probation for a period of **six (6) months** from the date of joining.
-
-3.2 During probation, either party may terminate this agreement by giving **30 days' written notice**.
-
-## 4. INTELLECTUAL PROPERTY
-
-4.1 All intellectual property created by the Employee during the course of employment shall be the exclusive property of the Company.
-
-4.2 The Employee hereby assigns all rights, title, and interest in such intellectual property to the Company.
-
-## 5. CONFIDENTIALITY
-
-5.1 The Employee shall not disclose any confidential information of the Company to any third party during or after the term of employment.
-
-## 6. GOVERNING LAW
-
-6.1 This Agreement shall be governed by and construed in accordance with the laws of India.
-
-6.2 Any disputes shall be subject to the exclusive jurisdiction of the courts in New Delhi.
-
----
-
-**IN WITNESS WHEREOF**, the parties have executed this Agreement as of the date first written above.
-
-For **TechCorp India Pvt. Ltd.**
-
-_______________________
-Authorized Signatory
-
-**Employee**
-
-_______________________
-[Employee Name]`,
-    status: 'final',
-    mode: 'draft',
-    createdAt: '2025-06-15T10:00:00Z',
-    updatedAt: '2025-06-20T14:00:00Z',
-  },
-  {
-    id: 'doc_2',
-    title: 'Non-Disclosure Agreement — Startup Partnership',
-    description: 'Mutual NDA for business collaboration',
-    content: `# MUTUAL NON-DISCLOSURE AGREEMENT
-
-**Date:** 20th June, 2025
-
-**Between:**
-- **Party A**: [Company Name], [Address]
-- **Party B**: [Company Name], [Address]
-
-## 1. PURPOSE
-
-The parties wish to explore a potential business relationship concerning [describe purpose] and in connection with this opportunity, each party may disclose certain confidential information to the other party.
-
-## 2. DEFINITION OF CONFIDENTIAL INFORMATION
-
-"Confidential Information" means any information disclosed by one party to the other, either directly or indirectly, in writing, orally, or by inspection of tangible objects.
-
-## 3. OBLIGATIONS
-
-3.1 The Receiving Party shall hold and maintain the Confidential Information in strict confidence.
-
-3.2 The Receiving Party shall not use the Confidential Information for any purpose other than the Purpose stated herein.
-
-## 4. TERM
-
-This Agreement shall remain in effect for a period of **two (2) years** from the date of execution.
-
-## 5. GOVERNING LAW
-
-This Agreement shall be governed by Indian law, with disputes subject to arbitration under the Arbitration and Conciliation Act, 1996, seated in New Delhi.`,
+    id: 'doc_initial',
+    title: 'Untitled Document',
+    description: '',
+    content: '',
     status: 'draft',
     mode: 'draft',
-    createdAt: '2025-06-20T09:00:00Z',
-    updatedAt: '2025-06-24T11:00:00Z',
-  },
-  {
-    id: 'doc_3',
-    title: 'GST Compliance Report — Q2 2025',
-    description: 'Quarterly compliance status for e-commerce business',
-    content: `# GST COMPLIANCE REPORT — Q2 2025
-
-**Business:** ABC E-commerce Pvt. Ltd.
-**GSTIN:** 09AADCC1234A1Z5
-**Period:** April 2025 – June 2025
-
-## Summary
-
-| Item | Status | Due Date |
-|------|--------|----------|
-| GSTR-1 (April) | ✅ Filed | 11 May 2025 |
-| GSTR-1 (May) | ✅ Filed | 11 Jun 2025 |
-| GSTR-1 (June) | ⚠️ Pending | 11 Jul 2025 |
-| GSTR-3B (April) | ✅ Filed | 20 May 2025 |
-| GSTR-3B (May) | ✅ Filed | 20 Jun 2025 |
-| GSTR-3B (June) | ⚠️ Pending | 20 Jul 2025 |
-
-## Key Observations
-
-1. **Input Tax Credit**: ₹4,23,000 claimed against ₹12,45,000 outward tax
-2. **TCS Collection**: ₹89,000 collected as Tax Collection at Source under Section 52
-3. **Reverse Charge**: ₹1,12,000 paid under reverse charge mechanism
-
-## Action Items
-
-- [ ] File GSTR-1 for June by 11 July 2025
-- [ ] File GSTR-3B for June by 20 July 2025
-- [ ] Reconcile ITC with GSTR-2B before filing
-- [ ] Review TCS credits from marketplace operators`,
-    status: 'final',
-    mode: 'compliance',
-    createdAt: '2025-06-18T08:00:00Z',
-    updatedAt: '2025-06-24T16:00:00Z',
+    createdAt: '2025-06-25T10:00:00Z',
+    updatedAt: '2025-06-25T10:00:00Z',
   },
 ];
 
@@ -522,8 +362,7 @@ export const PERSONA_DATA = {
       'For practicing advocates, lawyers, and legal professionals. Get AI-powered legal research, case analysis, and contract drafting tailored for Indian courts.',
     useCases: 'Case research, Draft pleadings, Precedent analysis, Client advisory',
     color: '#C9A84C',
-    exampleQuery:
-      'What are the grounds for anticipatory bail under Section 438 CrPC?',
+    exampleQuery: 'What are the grounds for anticipatory bail under Section 438 CrPC?',
   },
   business: {
     icon: '🏢',
@@ -532,16 +371,14 @@ export const PERSONA_DATA = {
       'For entrepreneurs, founders, and business owners. Navigate Indian business law, compliance requirements, and contract management with confidence.',
     useCases: 'GST compliance, Employment law, Company registration, Contract review',
     color: '#7B9E87',
-    exampleQuery:
-      'What are the DPDP Act 2023 compliance requirements for my e-commerce startup?',
+    exampleQuery: 'What are the DPDP Act 2023 compliance requirements for my e-commerce startup?',
   },
   student: {
     icon: '📚',
     title: 'Law Student',
     description:
       'For law students and researchers. Access comprehensive legal research, understand case law, and prepare for moot courts with AI assistance.',
-    useCases:
-      'Legal research, Case briefs, Moot court prep, Study notes',
+    useCases: 'Legal research, Case briefs, Moot court prep, Study notes',
     color: '#7B8FBE',
     exampleQuery:
       'Explain the doctrine of basic structure as established in Kesavananda Bharati v. State of Kerala',

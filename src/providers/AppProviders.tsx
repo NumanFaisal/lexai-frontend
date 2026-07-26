@@ -22,11 +22,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function AppProviders({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <Provider store={store}>
       <AuthInitializer>{children}</AuthInitializer>

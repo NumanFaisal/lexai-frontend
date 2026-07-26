@@ -60,19 +60,23 @@ export default function TopBar() {
   const pageTitle = ROUTE_TITLES[pathname] || 'LexAI';
 
   return (
-    <header className="flex h-[56px] flex-shrink-0 items-center justify-between border-b border-border-default bg-bg-secondary px-4">
+    <header className="border-border-default bg-bg-secondary flex h-[56px] flex-shrink-0 items-center justify-between border-b px-4">
       {/* Left: Mobile hamburger + page/mode context */}
-      <div className="flex items-center gap-4 flex-1">
+      <div className="flex flex-1 items-center gap-4">
         <button
           onClick={() => dispatch(toggleMobileSidebar())}
-          className="flex h-[32px] w-[32px] items-center justify-center rounded-[7px] border border-border-default lg:hidden hover:bg-bg-tertiary transition-colors shrink-0"
+          className="border-border-default hover:bg-bg-tertiary flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[7px] border transition-colors lg:hidden"
         >
           <Menu size={16} strokeWidth={1.5} className="text-text-secondary" />
         </button>
 
         {/* Search bar */}
         <div className="relative w-full max-w-[280px] sm:max-w-xs md:max-w-md">
-          <Search size={16} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+          <Search
+            size={16}
+            strokeWidth={1.5}
+            className="text-text-muted absolute top-1/2 left-3 -translate-y-1/2"
+          />
           <input
             type="text"
             placeholder="Search compliance codes, case files..."
@@ -90,27 +94,27 @@ export default function TopBar() {
                 }
               }
             }}
-            className="w-full bg-bg-primary border border-border-default rounded-full py-1.5 pl-10 pr-4 text-[12px] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-gold transition-all"
+            className="bg-bg-primary border-border-default text-text-primary placeholder:text-text-disabled focus:border-gold w-full rounded-full border py-1.5 pr-4 pl-10 text-[12px] transition-all focus:outline-none"
           />
         </div>
 
         {/* Nav links */}
-        <nav className="hidden lg:flex items-center gap-6 ml-4">
+        <nav className="ml-4 hidden items-center gap-6 lg:flex">
           <Link
             href="/chat"
-            className="text-text-secondary hover:text-text-primary transition-colors text-[13px] font-medium"
+            className="text-text-secondary hover:text-text-primary text-[13px] font-medium transition-colors"
           >
             Dashboard
           </Link>
           <Link
             href="/vault"
-            className="text-text-secondary hover:text-text-primary transition-colors text-[13px] font-medium"
+            className="text-text-secondary hover:text-text-primary text-[13px] font-medium transition-colors"
           >
             History
           </Link>
           <Link
             href="/documents"
-            className="text-text-secondary hover:text-text-primary transition-colors text-[13px] font-medium"
+            className="text-text-secondary hover:text-text-primary text-[13px] font-medium transition-colors"
           >
             Templates
           </Link>
@@ -118,11 +122,11 @@ export default function TopBar() {
       </div>
 
       {/* Right: Actions + Upgrade + Notification + User Menu */}
-      <div className="flex items-center gap-3 shrink-0 ml-4">
+      <div className="ml-4 flex shrink-0 items-center gap-3">
         {pathname === '/chat' && (
           <button
             onClick={handleNewChat}
-            className="hidden md:flex items-center gap-1.5 rounded-md border border-border-default px-2.5 py-1 text-[11px] text-text-muted transition-colors hover:border-gold-border hover:text-gold"
+            className="border-border-default text-text-muted hover:border-gold-border hover:text-gold hidden items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] transition-colors md:flex"
           >
             <Plus size={14} strokeWidth={1.5} />
             New chat
@@ -131,24 +135,24 @@ export default function TopBar() {
 
         <button
           onClick={() => router.push('/pricing')}
-          className="hidden sm:block px-4 py-1 border border-border-default text-text-primary text-[12px] font-medium rounded-full hover:bg-bg-tertiary active:scale-[0.98] transition-all"
+          className="border-border-default text-text-primary hover:bg-bg-tertiary hidden rounded-full border px-4 py-1 text-[12px] font-medium transition-all active:scale-[0.98] sm:block"
         >
           Upgrade
         </button>
 
         {/* Notification Bell */}
-        <button className="p-2 text-text-muted hover:text-text-primary transition-colors relative">
+        <button className="text-text-muted hover:text-text-primary relative p-2 transition-colors">
           <Bell size={18} strokeWidth={1.5} />
-          <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-error rounded-full"></span>
+          <span className="bg-error absolute top-2 right-2 h-1.5 w-1.5 rounded-full"></span>
         </button>
 
         {/* User dropdown */}
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => dispatch(setUserMenuOpen(!userMenuOpen))}
-            className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-bg-tertiary"
+            className="hover:bg-bg-tertiary flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-bg-tertiary text-[11px] font-medium text-gold">
+            <div className="bg-bg-tertiary text-gold flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-medium">
               {user?.avatarInitials || '?'}
             </div>
             <ChevronDown
@@ -161,13 +165,13 @@ export default function TopBar() {
           </button>
 
           {userMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border border-border-default bg-bg-secondary py-1 shadow-lg z-50">
+            <div className="border-border-default bg-bg-secondary absolute top-full right-0 z-50 mt-1 w-48 rounded-xl border py-1 shadow-lg">
               <button
                 onClick={() => {
                   dispatch(setUserMenuOpen(false));
                   router.push('/settings');
                 }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                className="text-text-secondary hover:bg-bg-tertiary hover:text-text-primary flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] transition-colors"
               >
                 <Settings size={16} strokeWidth={1.5} />
                 Settings
@@ -177,15 +181,15 @@ export default function TopBar() {
                   dispatch(setUserMenuOpen(false));
                   router.push('/pricing');
                 }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                className="text-text-secondary hover:bg-bg-tertiary hover:text-text-primary flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] transition-colors"
               >
                 <CreditCard size={16} strokeWidth={1.5} />
                 Upgrade Plan
               </button>
-              <div className="my-1 h-px bg-border-default" />
+              <div className="bg-border-default my-1 h-px" />
               <button
                 onClick={handleLogout}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-error transition-colors hover:bg-error/5"
+                className="text-error hover:bg-error/5 flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] transition-colors"
               >
                 <LogOut size={16} strokeWidth={1.5} />
                 Log out

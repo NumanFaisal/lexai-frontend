@@ -54,7 +54,7 @@ export default function OnboardPage() {
     const personaData = PERSONA_DATA[selected];
     dispatch(setInputValue(personaData.exampleQuery));
 
-    toast.success('Welcome to LexAI! Here\'s your first example query.');
+    toast.success("Welcome to LexAI! Here's your first example query.");
     router.push('/chat');
   };
 
@@ -74,12 +74,12 @@ export default function OnboardPage() {
     <div className="flex h-full items-center justify-center p-6">
       <div className="w-full max-w-[640px]">
         <div className="text-center">
-          <h1 className="font-serif text-[30px] font-semibold leading-[1.25] text-text-primary">
+          <h1 className="text-text-primary font-serif text-[30px] leading-[1.25] font-semibold">
             Choose your path
           </h1>
-          <p className="mt-3 text-[13px] leading-relaxed text-text-secondary">
-            Select how you&apos;ll primarily use LexAI. This personalizes your experience
-            with relevant tools, templates, and query suggestions.
+          <p className="text-text-secondary mt-3 text-[13px] leading-relaxed">
+            Select how you&apos;ll primarily use LexAI. This personalizes your experience with
+            relevant tools, templates, and query suggestions.
           </p>
         </div>
 
@@ -89,7 +89,7 @@ export default function OnboardPage() {
           initial="initial"
           animate="animate"
         >
-          {(Object.entries(PERSONA_DATA) as [PersonaKey, typeof PERSONA_DATA[PersonaKey]][]).map(
+          {(Object.entries(PERSONA_DATA) as [PersonaKey, (typeof PERSONA_DATA)[PersonaKey]][]).map(
             ([key, data]) => {
               const isSelected = selected === key;
               return (
@@ -99,20 +99,18 @@ export default function OnboardPage() {
                   onClick={() => setSelected(key)}
                   className={`relative w-full rounded-2xl border p-7 text-left transition-all duration-200 ${
                     isSelected
-                      ? 'border-2 bg-opacity-5'
+                      ? 'bg-opacity-5 border-2'
                       : 'border-border-default bg-bg-secondary hover:border-opacity-60 hover:scale-[1.01]'
                   }`}
                   style={{
                     borderColor: isSelected ? data.color : undefined,
-                    backgroundColor: isSelected
-                      ? `${data.color}0D`
-                      : undefined,
+                    backgroundColor: isSelected ? `${data.color}0D` : undefined,
                   }}
                 >
                   {/* Selected checkmark */}
                   {isSelected && (
                     <div
-                      className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full"
+                      className="absolute top-4 right-4 flex h-5 w-5 items-center justify-center rounded-full"
                       style={{ backgroundColor: data.color }}
                     >
                       <Check size={12} strokeWidth={2} className="text-bg-primary" />
@@ -131,15 +129,13 @@ export default function OnboardPage() {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-serif text-[18px] font-semibold text-text-primary">
+                      <h3 className="text-text-primary font-serif text-[18px] font-semibold">
                         {data.title}
                       </h3>
-                      <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
+                      <p className="text-text-secondary mt-1 text-[13px] leading-relaxed">
                         {data.description}
                       </p>
-                      <p className="mt-2 text-[11px] text-text-muted">
-                        {data.useCases}
-                      </p>
+                      <p className="text-text-muted mt-2 text-[11px]">{data.useCases}</p>
                     </div>
                   </div>
                 </motion.button>
@@ -152,14 +148,14 @@ export default function OnboardPage() {
           <button
             onClick={handleContinue}
             disabled={!selected || isSubmitting}
-            className="flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-gold px-5 py-3 text-[13px] font-medium text-bg-primary transition-colors duration-200 hover:bg-gold-hover active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="bg-gold text-bg-primary hover:bg-gold-hover flex flex-1 items-center justify-center gap-2 rounded-[10px] px-5 py-3 text-[13px] font-medium transition-colors duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isSubmitting ? 'Setting up...' : 'Continue'}
             {!isSubmitting && <ArrowRight size={16} strokeWidth={1.5} />}
           </button>
           <button
             onClick={handleSkip}
-            className="flex items-center gap-1.5 rounded-[10px] border border-border-default px-4 py-3 text-[13px] text-text-muted transition-colors hover:border-gold-border hover:text-text-secondary"
+            className="border-border-default text-text-muted hover:border-gold-border hover:text-text-secondary flex items-center gap-1.5 rounded-[10px] border px-4 py-3 text-[13px] transition-colors"
           >
             <SkipForward size={14} strokeWidth={1.5} />
             Skip for now

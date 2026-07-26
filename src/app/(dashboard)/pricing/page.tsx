@@ -43,10 +43,10 @@ function PricingContent() {
       <div className="mx-auto max-w-[960px] px-6 py-8">
         {/* Header */}
         <div className="text-center">
-          <h1 className="font-serif text-[30px] font-semibold text-text-primary">
+          <h1 className="text-text-primary font-serif text-[30px] font-semibold">
             Choose your plan
           </h1>
-          <p className="mt-2 text-[13px] text-text-secondary">
+          <p className="text-text-secondary mt-2 text-[13px]">
             Unlock the full power of AI-assisted Indian legal research
           </p>
         </div>
@@ -70,7 +70,7 @@ function PricingContent() {
                 ref={plan.id === 'advocate_pro' ? proCardRef : undefined}
                 className={`relative rounded-2xl border p-7 transition-all duration-200 ${
                   isFeatured
-                    ? 'border-2 border-gold shadow-[0_0_40px_#C9A84C15] scale-[1.02]'
+                    ? 'border-gold scale-[1.02] border-2 shadow-[0_0_40px_#C9A84C15]'
                     : 'border-border-default bg-bg-secondary'
                 } ${isHighlighted ? 'pulse-once' : ''}`}
                 style={{
@@ -79,14 +79,14 @@ function PricingContent() {
               >
                 {/* Featured badge */}
                 {isFeatured && (
-                  <div className="absolute -top-3 right-4 rounded-full bg-gold px-3 py-1 text-[10px] font-semibold text-bg-primary">
+                  <div className="bg-gold text-bg-primary absolute -top-3 right-4 rounded-full px-3 py-1 text-[10px] font-semibold">
                     Most Popular
                   </div>
                 )}
 
                 {/* Plan name */}
                 <p
-                  className="text-[12px] font-medium uppercase tracking-[0.08em]"
+                  className="text-[12px] font-medium tracking-[0.08em] uppercase"
                   style={{ color: plan.color }}
                 >
                   {plan.name}
@@ -102,17 +102,13 @@ function PricingContent() {
                   >
                     {plan.price === 0 ? '₹0' : `₹${plan.price}`}
                   </span>
-                  <span className="text-[14px] text-text-muted">
-                    {plan.period}
-                  </span>
+                  <span className="text-text-muted text-[14px]">{plan.period}</span>
                 </div>
 
-                <p className="mt-1 text-[12px] text-text-muted">
-                  {plan.description}
-                </p>
+                <p className="text-text-muted mt-1 text-[12px]">{plan.description}</p>
 
                 {/* Divider */}
-                <div className="my-5 h-px bg-border-default" />
+                <div className="bg-border-default my-5 h-px" />
 
                 {/* Features */}
                 <ul className="space-y-2.5">
@@ -120,9 +116,7 @@ function PricingContent() {
                     <li
                       key={idx}
                       className={`flex items-start gap-2 text-[13px] ${
-                        feature.included
-                          ? 'text-text-secondary'
-                          : 'text-text-disabled line-through'
+                        feature.included ? 'text-text-secondary' : 'text-text-disabled line-through'
                       }`}
                     >
                       {feature.included ? (
@@ -136,7 +130,7 @@ function PricingContent() {
                         <X
                           size={14}
                           strokeWidth={1.5}
-                          className="mt-0.5 flex-shrink-0 text-text-disabled"
+                          className="text-text-disabled mt-0.5 flex-shrink-0"
                         />
                       )}
                       {feature.text}
@@ -178,9 +172,8 @@ function PricingContent() {
         </motion.div>
 
         {/* Footer note */}
-        <p className="mt-8 text-center text-[11px] text-text-muted">
-          All prices in ₹ (Indian Rupees). Cancel anytime. Payments processed
-          securely via Razorpay.
+        <p className="text-text-muted mt-8 text-center text-[11px]">
+          All prices in ₹ (Indian Rupees). Cancel anytime. Payments processed securely via Razorpay.
         </p>
       </div>
     </div>
@@ -189,7 +182,13 @@ function PricingContent() {
 
 export default function PricingPage() {
   return (
-    <Suspense fallback={<div className="h-full flex items-center justify-center text-text-muted text-[13px]">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="text-text-muted flex h-full items-center justify-center text-[13px]">
+          Loading...
+        </div>
+      }
+    >
       <PricingContent />
     </Suspense>
   );

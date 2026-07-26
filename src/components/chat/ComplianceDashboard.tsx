@@ -236,7 +236,7 @@ export default function ComplianceDashboard({ data }: ComplianceDashboardProps) 
           <p className="text-text-secondary text-[12px] font-medium mt-1 uppercase tracking-wider">
             Completed Obligations
           </p>
-          <div className="mt-4 flex items-center gap-1.5 text-[11px] text-success bg-success/10 w-fit px-2.5 py-0.5 rounded-md font-medium">
+          <div className="text-success bg-success/10 mt-4 flex w-fit items-center gap-1.5 rounded-md px-2.5 py-0.5 text-[11px] font-medium">
             <CheckCircle size={12} /> Compliant
           </div>
         </div>
