@@ -40,6 +40,23 @@ function PlaceholderComponent(props: any) {
 
   const text = node.textContent;
   const isFilled = text.length > 0 && text !== fieldId;
+  const isSignature = fieldId && fieldId.toLowerCase().includes('signature');
+
+  if (isSignature) {
+    return (
+      <NodeViewWrapper
+        as="span"
+        className={`mx-1 inline-block min-w-[200px] cursor-text text-center text-[15px] transition-colors border-b caret-gray-900 ${
+          isFilled
+            ? 'border-gray-800 text-gray-900 font-medium'
+            : 'border-gray-400 text-gray-400/70 italic'
+        }`}
+        style={{ paddingBottom: '2px', verticalAlign: 'baseline' }}
+      >
+        <NodeViewContent as="span" className="outline-none" />
+      </NodeViewWrapper>
+    );
+  }
 
   return (
     <NodeViewWrapper

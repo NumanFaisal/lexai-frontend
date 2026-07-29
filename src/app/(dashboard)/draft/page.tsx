@@ -71,6 +71,10 @@ function DraftContent() {
   const [activeTab, setActiveTab] = useState<'my_docs' | 'templates'>('my_docs');
   const [dbTemplates, setDbTemplates] = useState<any[]>([]);
   const [shareLink, setShareLink] = useState<string | null>(null);
+  
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{role: 'user'|'ai', content: string}[]>([]);
 
   useEffect(() => {
     async function fetchTemplates() {
@@ -85,6 +89,28 @@ function DraftContent() {
     }
     fetchTemplates();
   }, []);
+
+  const fetchSuggestions = useCallback(async (docId: string, resetChat = false) => {
+    if (!docId) return;
+    if (resetChat) setChatMessages([]);
+    setIsLoadingSuggestions(true);
+    try {
+      const res = await api.get(`/drafts/${docId}/suggestions`);
+      if (res.data?.success && res.data.data.suggestions) {
+        setSuggestions(res.data.data.suggestions);
+      }
+    } catch (err) {
+      console.error('Error fetching suggestions:', err);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeDocumentId) {
+      fetchSuggestions(activeDocumentId, true);
+    }
+  }, [activeDocumentId, fetchSuggestions]);
 
   const getDocumentTags = (doc: DocType) => {
     const titleLower = doc.title.toLowerCase();
@@ -210,28 +236,57 @@ function DraftContent() {
     }
   };
 
-  const handleAIRevision = async () => {
-    if (!activeDocumentId || !revisionQuery.trim()) return;
+  const handleApplySuggestion = async (instruction: string) => {
+    if (!activeDocumentId || !instruction.trim()) return;
+    
+    if (instruction === 'Review Jurisdiction') {
+      toast('Please review the jurisdiction and party addresses in the document above.', { icon: '🔍' });
+      return;
+    }
+    
     setIsRevising(true);
     dispatch(setSaveStatus('saving'));
 
-    // Simulate AI thinking and applying changes
-    await new Promise((r) => setTimeout(r, 1800));
-
-    const currentDoc = documents.find((d) => d.id === activeDocumentId);
-    if (currentDoc) {
-      const addedText = `\n\n## AI REVISION: ${revisionQuery}\n\n[LexAI has automatically revised this section based on your prompt: "${revisionQuery}". Under the applicable Indian legal regulations, these terms have been adapted to protect the parties' interests and ensure full compliance.]\n\n1. The parties agree that this clause shall be binding under the local jurisdiction of India.\n2. Both parties represent that they have full authority to execute these amendments.`;
-      dispatch(
-        updateDocumentContent({
-          id: activeDocumentId,
-          content: currentDoc.content + addedText,
-        })
-      );
-      dispatch(setSaveStatus('saved'));
-      toast.success('Document revised by LexAI');
-      setRevisionQuery('');
-      setTimeout(() => dispatch(setSaveStatus('idle')), 2000);
+    try {
+      const res = await api.post(`/drafts/${activeDocumentId}/revise`, { instruction });
+      if (res.data?.success && res.data.data.draft) {
+        dispatch(
+          updateDocumentContent({
+            id: activeDocumentId,
+            content: res.data.data.draft.content,
+          })
+        );
+        dispatch(setSaveStatus('saved'));
+        toast.success('Suggestion applied successfully');
+        setTimeout(() => dispatch(setSaveStatus('idle')), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to apply suggestion', err);
+      dispatch(setSaveStatus('error'));
+      toast.error('Failed to apply suggestion');
     }
+    
+    setIsRevising(false);
+  };
+
+  const handleAskAI = async () => {
+    const question = revisionQuery.trim();
+    if (!activeDocumentId || !question) return;
+    
+    setIsRevising(true);
+    setRevisionQuery('');
+    setChatMessages(prev => [...prev, { role: 'user', content: question }]);
+
+    try {
+      const res = await api.post(`/drafts/${activeDocumentId}/ask`, { question });
+      if (res.data?.success && res.data.data.answer) {
+        setChatMessages(prev => [...prev, { role: 'ai', content: res.data.data.answer }]);
+      }
+    } catch (err) {
+      console.error('Failed to ask AI', err);
+      toast.error('AI failed to respond');
+    }
+    
     setIsRevising(false);
   };
 
@@ -275,7 +330,6 @@ function DraftContent() {
 
   const activeDoc = documents.find((d) => d.id === activeDocumentId);
 
-  // Auto-save with debounce
   const handleContentChange = useCallback(
     (content: string) => {
       if (!activeDocumentId) return;
@@ -287,6 +341,10 @@ function DraftContent() {
         try {
           await api.put(`/drafts/${activeDocumentId}`, { content });
           dispatch(setSaveStatus('saved'));
+          
+          // Refresh suggestions after autosave (no UI blockage)
+          fetchSuggestions(activeDocumentId, false);
+          
           setTimeout(() => dispatch(setSaveStatus('idle')), 2000);
         } catch (err) {
           console.error('Failed to save draft', err);
@@ -294,7 +352,7 @@ function DraftContent() {
         }
       }, 1500);
     },
-    [activeDocumentId, dispatch]
+    [activeDocumentId, dispatch, fetchSuggestions]
   );
 
   const selectDocument = (id: string) => {
@@ -663,38 +721,73 @@ function DraftContent() {
                     </div>
 
                     <div className="flex flex-col gap-3">
-                      <div className="border border-gold/30 bg-[#C9A84C08] rounded-lg p-3 border-l-[3px] border-l-gold">
-                        <div className="flex gap-2.5">
-                          <Lightbulb size={14} className="text-gold shrink-0 mt-0.5" />
-                          <div className="flex flex-col gap-3">
-                            <p className="text-[12px] text-text-secondary leading-snug">
-                              Consider adding a non-solicitation clause to protect your employees.
-                            </p>
-                            <button className="text-[9px] font-bold tracking-wider text-gold hover:text-[#E6B86C] text-left uppercase flex items-center gap-1 transition-colors">
-                              Apply Clause <ArrowRight size={12} />
-                            </button>
-                          </div>
+                      {isLoadingSuggestions ? (
+                        <div className="flex items-center justify-center p-4">
+                          <Loader2 size={16} className="animate-spin text-text-muted" />
                         </div>
-                      </div>
-
-                      <div className="border border-[#2A2A2D] bg-[#1A1A1D]/50 rounded-lg p-3 border-l-[3px] border-l-[#84ADED]">
-                        <div className="flex gap-2.5">
-                          <Shield size={14} className="text-[#84ADED] shrink-0 mt-0.5" />
-                          <div className="flex flex-col gap-3">
-                            <p className="text-[12px] text-text-secondary leading-snug">
-                              Jurisdiction clause references Delhi — ensure both parties have Delhi presence.
-                            </p>
-                            <button className="text-[9px] font-bold tracking-wider text-text-muted hover:text-text-secondary text-left uppercase flex items-center gap-1 transition-colors">
-                              Review Jurisdiction <ArrowRight size={12} />
-                            </button>
-                          </div>
+                      ) : suggestions.length === 0 ? (
+                        <div className="text-text-muted text-[11px] text-center p-4">
+                          No suggestions at this time.
                         </div>
-                      </div>
+                      ) : (
+                        suggestions.map((suggestion) => (
+                          <div 
+                            key={suggestion.id}
+                            className={`border rounded-lg p-3 border-l-[3px] ${
+                              suggestion.type === 'improvement'
+                                ? 'border-gold/30 bg-[#C9A84C08] border-l-gold'
+                                : 'border-[#2A2A2D] bg-[#1A1A1D]/50 border-l-[#84ADED]'
+                            }`}
+                          >
+                            <div className="flex gap-2.5">
+                              {suggestion.type === 'improvement' ? (
+                                <Lightbulb size={14} className="text-gold shrink-0 mt-0.5" />
+                              ) : (
+                                <Shield size={14} className="text-[#84ADED] shrink-0 mt-0.5" />
+                              )}
+                              <div className="flex flex-col gap-3">
+                                <p className="text-[12px] text-text-secondary leading-snug">
+                                  {suggestion.text}
+                                </p>
+                                <button
+                                  onClick={() => handleApplySuggestion(suggestion.actionPrompt)}
+                                  className={`text-[9px] font-bold tracking-wider text-left uppercase flex items-center gap-1 transition-colors ${
+                                    suggestion.type === 'improvement'
+                                      ? 'text-gold hover:text-[#E6B86C]'
+                                      : 'text-text-muted hover:text-text-secondary'
+                                  }`}
+                                >
+                                  {suggestion.actionPrompt === 'Review Jurisdiction' ? 'Review Jurisdiction' : 'Apply Clause'} <ArrowRight size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
 
+
                   {/* AI Chat / Revise */}
-                  <div className="p-4 mt-auto border-t border-[#1A1A1D] bg-[#0a0a0c] sticky bottom-0">
+                  <div className="p-4 mt-auto border-t border-[#1A1A1D] bg-[#0a0a0c] sticky bottom-0 flex flex-col gap-3">
+                    
+                    {chatMessages.length > 0 && (
+                      <div className="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto custom-scrollbar">
+                        {chatMessages.map((msg, i) => (
+                          <div 
+                            key={i} 
+                            className={`p-2.5 rounded-lg text-[12px] leading-relaxed max-w-[90%] ${
+                              msg.role === 'user' 
+                                ? 'bg-[#1A1A1D] self-end text-text-primary border border-[#2A2A2D]' 
+                                : 'bg-gold/10 text-gold border border-gold/20 self-start'
+                            }`}
+                          >
+                            {msg.content}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
                     <div className="flex items-center gap-2 bg-[#1A1A1D] border border-[#2A2A2D] rounded-lg p-1.5 focus-within:border-gold/50 transition-colors shadow-sm">
                       <div className="pl-2 pr-1 shrink-0">
                         <Sparkles size={14} className="text-gold" />
@@ -703,12 +796,12 @@ function DraftContent() {
                         type="text"
                         value={revisionQuery}
                         onChange={(e) => setRevisionQuery(e.target.value)}
-                        placeholder="Ask AI to revise this document..."
+                        placeholder="Ask AI about this document..."
                         className="bg-transparent w-full min-w-0 text-[12px] text-text-primary outline-none focus:outline-none focus:ring-0 border-none placeholder:text-text-muted"
-                        onKeyDown={(e) => e.key === 'Enter' && handleAIRevision()}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAskAI()}
                       />
                       <button
-                        onClick={handleAIRevision}
+                        onClick={handleAskAI}
                         disabled={isRevising || !revisionQuery.trim()}
                         className="bg-gold text-[#0a0a0b] shrink-0 px-3 py-1.5 rounded text-[11px] font-bold tracking-wide transition-colors hover:bg-[#D4B254] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                       >
