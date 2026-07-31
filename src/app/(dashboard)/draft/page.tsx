@@ -50,9 +50,6 @@ import type { Document as DocType } from '@/lib/types';
 import GavelLoader from '@/components/ui/GavelLoader';
 import TiptapEditor from '@/components/editor/TiptapEditor';
 import { parseTemplateToHTML } from '@/lib/editor/parseTemplate';
-import { vakalatnamaTemplate } from '@/lib/templates/vakalatnama';
-import { employmentAgreementTemplate } from '@/lib/templates/employmentAgreement';
-import { disclosureTemplate } from '@/lib/templates/disclosure';
 import api from '@/lib/axios';
 
 
@@ -71,10 +68,23 @@ function DraftContent() {
   const [activeTab, setActiveTab] = useState<'my_docs' | 'templates'>('my_docs');
   const [dbTemplates, setDbTemplates] = useState<any[]>([]);
   const [shareLink, setShareLink] = useState<string | null>(null);
-  
+
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{role: 'user'|'ai', content: string}[]>([]);
+  // AI chat state: each message has a role, content, and optional type for styling
+  const [chatMessages, setChatMessages] = useState<{
+    role: 'user' | 'ai' | 'system';
+    content: string;
+    type?: 'info' | 'success' | 'question' | 'error';
+  }[]>([
+    {
+      role: 'ai',
+      content: 'Hi! I can answer questions about this document or make changes to it. Just tell me what you need.',
+      type: 'info',
+    },
+  ]);
+  // Track whether the AI is in a clarification loop (waiting for more context)
+  const [pendingRevisionContext, setPendingRevisionContext] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchTemplates() {
@@ -90,9 +100,18 @@ function DraftContent() {
     fetchTemplates();
   }, []);
 
+  const WELCOME_MESSAGE = {
+    role: 'ai' as const,
+    content: 'Hi! I can answer questions about this document or make changes to it. Just tell me what you need.',
+    type: 'info' as const,
+  };
+
   const fetchSuggestions = useCallback(async (docId: string, resetChat = false) => {
     if (!docId) return;
-    if (resetChat) setChatMessages([]);
+    if (resetChat) {
+      setChatMessages([WELCOME_MESSAGE]);
+      setPendingRevisionContext(null);
+    }
     setIsLoadingSuggestions(true);
     try {
       const res = await api.get(`/drafts/${docId}/suggestions`);
@@ -218,6 +237,8 @@ function DraftContent() {
     };
   };
 
+  // ─── HANDLERS ─────────────────────────────────────────────────────────────
+
   const handleSave = async () => {
     if (!activeDocumentId) return;
     const currentDoc = documents.find((d) => d.id === activeDocumentId);
@@ -225,12 +246,15 @@ function DraftContent() {
     
     dispatch(setSaveStatus('saving'));
     try {
-      await api.put(`/drafts/${activeDocumentId}`, { content: currentDoc.content });
+      await api.put(`/documents/${activeDocumentId}`, { 
+        title: currentDoc.title,
+        content: currentDoc.content 
+      });
       dispatch(setSaveStatus('saved'));
       toast.success('Document saved successfully');
       setTimeout(() => dispatch(setSaveStatus('idle')), 2000);
     } catch (err) {
-      console.error('Failed to save draft manually', err);
+      console.error('Failed to save document', err);
       dispatch(setSaveStatus('error'));
       toast.error('Failed to save document');
     }
@@ -238,70 +262,147 @@ function DraftContent() {
 
   const handleApplySuggestion = async (instruction: string) => {
     if (!activeDocumentId || !instruction.trim()) return;
-    
+
     if (instruction === 'Review Jurisdiction') {
       toast('Please review the jurisdiction and party addresses in the document above.', { icon: '🔍' });
       return;
     }
-    
+
     setIsRevising(true);
     dispatch(setSaveStatus('saving'));
 
     try {
+      // Use /drafts AI revise endpoint for AI-powered editing
       const res = await api.post(`/drafts/${activeDocumentId}/revise`, { instruction });
-      if (res.data?.success && res.data.data.draft) {
+      const data = res.data?.data;
+      if (data?.status === 'REVISED' && data.draft) {
         dispatch(
           updateDocumentContent({
             id: activeDocumentId,
-            content: res.data.data.draft.content,
+            content: data.draft.content,
           })
         );
         dispatch(setSaveStatus('saved'));
         toast.success('Suggestion applied successfully');
         setTimeout(() => dispatch(setSaveStatus('idle')), 2000);
+      } else if (data?.status === 'NEEDS_CLARIFICATION') {
+        toast(data.clarificationQuestion || 'AI needs more information.', { icon: '💬' });
       }
     } catch (err) {
       console.error('Failed to apply suggestion', err);
       dispatch(setSaveStatus('error'));
-      toast.error('Failed to apply suggestion');
+      toast.error('Failed to apply suggestion.');
     }
-    
+
     setIsRevising(false);
   };
 
-  const handleAskAI = async () => {
-    const question = revisionQuery.trim();
-    if (!activeDocumentId || !question) return;
-    
+  // ─── EDIT INTENT KEYWORDS ─────────────────────────────────────────────────
+  const REVISE_KEYWORDS = [
+    'change', 'update', 'add', 'remove', 'delete', 'replace', 'modify',
+    'insert', 'include', 'fix', 'correct', 'rewrite', 'edit', 'revise',
+    'make it', 'set the', 'put', 'write', 'draft', 'create', 'append',
+    'increase', 'decrease', 'reduce', 'extend', 'shorten', 'rename',
+    'move', 'swap', 'convert', 'strengthen', 'weaken',
+  ];
+
+  const detectIntent = (text: string): 'revise' | 'ask' => {
+    const lower = text.toLowerCase().trim();
+    const isQuestion =
+      lower.startsWith('what') || lower.startsWith('why') || lower.startsWith('how') ||
+      lower.startsWith('when') || lower.startsWith('where') || lower.startsWith('who') ||
+      lower.startsWith('is ') || lower.startsWith('are ') || lower.startsWith('does ') ||
+      lower.startsWith('can ') || lower.startsWith('explain') || lower.startsWith('tell me') ||
+      lower.startsWith('summarize') || lower.startsWith('list') || lower.endsWith('?');
+    if (isQuestion) return 'ask';
+    if (REVISE_KEYWORDS.some((kw) => lower.includes(kw))) return 'revise';
+    return 'ask';
+  };
+
+  const handleAIMessage = async () => {
+    const query = revisionQuery.trim();
+    if (!activeDocumentId || !query) return;
+
     setIsRevising(true);
     setRevisionQuery('');
-    setChatMessages(prev => [...prev, { role: 'user', content: question }]);
+    setChatMessages((prev) => [...prev, { role: 'user', content: query }]);
+
+    // Smart intent detection: route to /revise or /ask based on user's message
+    const intent = pendingRevisionContext ? 'revise' : detectIntent(query);
+    const instruction = pendingRevisionContext
+      ? `Original request: ${pendingRevisionContext}\nUser provided the following details: ${query}\nPlease now make the change using this information.`
+      : query;
 
     try {
-      const res = await api.post(`/drafts/${activeDocumentId}/ask`, { question });
-      if (res.data?.success && res.data.data.answer) {
-        setChatMessages(prev => [...prev, { role: 'ai', content: res.data.data.answer }]);
+      if (intent === 'revise') {
+        // Use /drafts AI revise endpoint for document editing
+        const res = await api.post(`/drafts/${activeDocumentId}/revise`, { instruction });
+        const data = res.data?.data;
+
+        if (data?.status === 'NEEDS_CLARIFICATION') {
+          // Agent needs more info — store context and ask the user
+          setPendingRevisionContext(instruction);
+          setChatMessages((prev) => [
+            ...prev,
+            { role: 'ai', content: data.clarificationQuestion, type: 'question' },
+          ]);
+        } else if (data?.status === 'REVISED' && data.draft) {
+          // Document was successfully revised — update the editor
+          setPendingRevisionContext(null);
+          dispatch(
+            updateDocumentContent({
+              id: activeDocumentId,
+              content: data.draft.content,
+            })
+          );
+          dispatch(setSaveStatus('saved'));
+          setTimeout(() => dispatch(setSaveStatus('idle')), 2000);
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              role: 'ai',
+              content: `✓ Done — ${data.summaryOfChanges || 'Document updated successfully.'}`,
+              type: 'success',
+            },
+          ]);
+          // Refresh suggestions after edit
+          fetchSuggestions(activeDocumentId, false);
+        }
+      } else {
+        // Q&A — answer the question, don't touch the document
+        setPendingRevisionContext(null);
+        const res = await api.post(`/drafts/${activeDocumentId}/ask`, { question: query });
+        if (res.data?.success && res.data.data?.answer) {
+          setChatMessages((prev) => [
+            ...prev,
+            { role: 'ai', content: res.data.data.answer, type: 'info' },
+          ]);
+        }
       }
     } catch (err) {
-      console.error('Failed to ask AI', err);
-      toast.error('AI failed to respond');
+      console.error('AI message failed', err);
+      setPendingRevisionContext(null);
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'ai', content: 'Something went wrong. Please try again.', type: 'error' },
+      ]);
     }
-    
+
     setIsRevising(false);
   };
 
   // Initialize documents from backend
   useEffect(() => {
-    async function fetchDrafts() {
+    async function fetchDocuments() {
       try {
-        const res = await api.get('/drafts');
-        if (res.data?.success) {
-          const fetchedDocs = res.data.data.drafts.map((d: any) => ({
+        const res = await api.get('/documents');
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          const fetchedDocs = res.data.data.map((d: any) => ({
             id: d.id,
             title: d.title,
             description: '',
-            content: d.content,
-            status: d.status === 'COMPLETE' ? 'final' : 'draft',
+            content: d.content || '',
+            status: d.status === 'FINALIZED' ? 'final' : 'draft',
             mode: 'draft',
             createdAt: d.createdAt,
             updatedAt: d.updatedAt,
@@ -309,10 +410,10 @@ function DraftContent() {
           dispatch(setDocuments(fetchedDocs));
         }
       } catch (err) {
-        console.error('Failed to fetch drafts', err);
+        console.error('Failed to fetch documents', err);
       }
     }
-    fetchDrafts();
+    fetchDocuments();
   }, [dispatch]);
 
   // Handle URL deep-link & default document select
@@ -339,15 +440,13 @@ function DraftContent() {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(async () => {
         try {
-          await api.put(`/drafts/${activeDocumentId}`, { content });
+          await api.put(`/documents/${activeDocumentId}`, { content });
           dispatch(setSaveStatus('saved'));
-          
-          // Refresh suggestions after autosave (no UI blockage)
+          // Refresh AI suggestions after autosave
           fetchSuggestions(activeDocumentId, false);
-          
           setTimeout(() => dispatch(setSaveStatus('idle')), 2000);
         } catch (err) {
-          console.error('Failed to save draft', err);
+          console.error('Failed to save document', err);
           dispatch(setSaveStatus('error'));
         }
       }, 1500);
@@ -362,27 +461,30 @@ function DraftContent() {
 
   const handleNewDocument = async () => {
     try {
-      const res = await api.post('/drafts', {
+      const res = await api.post('/documents', {
         title: 'Untitled Document',
-        content: '',
+        type: 'DRAFT',
+        content: 'Draft content...',
       });
-      if (res.data?.success) {
-        const d = res.data.data.draft;
+      if (res.data?.success && res.data.data) {
+        const d = res.data.data;
         const newDoc: DocType = {
           id: d.id,
           title: d.title,
           description: '',
-          content: d.content,
+          content: d.content || '',
           status: 'draft',
           mode: 'draft',
-          createdAt: d.createdAt,
-          updatedAt: d.updatedAt,
+          createdAt: d.createdAt || new Date().toISOString(),
+          updatedAt: d.updatedAt || new Date().toISOString(),
         };
         dispatch(addDocument(newDoc));
         dispatch(setActiveDocument(newDoc.id));
+        toast.success('Created new document');
       }
     } catch (err) {
-      console.error('Failed to create new draft', err);
+      console.error('Failed to create new document', err);
+      toast.error('Failed to create document');
     }
   };
 
@@ -390,11 +492,13 @@ function DraftContent() {
     if (!activeDocumentId) return;
     setExportingId(format);
     try {
-      const endpoint = format === 'pdf' ? `/drafts/${activeDocumentId}/export/pdf` : `/drafts/${activeDocumentId}/export/docx`;
-      const res = await api.get(endpoint);
+      const endpoint = format === 'pdf' ? `/documents/${activeDocumentId}/export/pdf` : `/documents/${activeDocumentId}/export/docx`;
+      const res = await api.post(endpoint);
       if (res.data?.success && res.data?.downloadUrl) {
         window.open(res.data.downloadUrl, '_blank');
-        toast.success(`Downloading ${format.toUpperCase()}...`);
+        toast.success(`Exported ${format.toUpperCase()} successfully!`);
+      } else {
+        toast.error(`Failed to export ${format.toUpperCase()}`);
       }
     } catch (err) {
       console.error(`Failed to export ${format}`, err);
@@ -407,11 +511,11 @@ function DraftContent() {
   const handleShare = async () => {
     if (!activeDocumentId) return;
     try {
-      const res = await api.post(`/drafts/${activeDocumentId}/share`);
-      if (res.data?.success) {
+      const res = await api.post(`/documents/${activeDocumentId}/share`);
+      if (res.data?.success && res.data.shareUrl) {
         navigator.clipboard.writeText(res.data.shareUrl);
         setShareLink(res.data.shareUrl);
-        toast.success('Share link copied to clipboard!');
+        toast.success('Share link generated & copied to clipboard!');
       }
     } catch (err) {
       console.error('Failed to generate share link', err);
@@ -421,10 +525,12 @@ function DraftContent() {
 
   const handleDelete = async (id: string) => {
     try {
-      await api.delete(`/drafts/${id}`);
+      await api.delete(`/documents/${id}`);
       dispatch(deleteDocument(id));
+      toast.success('Document archived');
     } catch (err) {
-      console.error('Failed to delete draft', err);
+      console.error('Failed to delete document', err);
+      toast.error('Failed to archive document');
     }
   };
 
@@ -770,16 +876,24 @@ function DraftContent() {
 
                   {/* AI Chat / Revise */}
                   <div className="p-4 mt-auto border-t border-[#1A1A1D] bg-[#0a0a0c] sticky bottom-0 flex flex-col gap-3">
-                    
+
                     {chatMessages.length > 0 && (
-                      <div className="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto custom-scrollbar">
+                      <div className="flex flex-col gap-2.5 max-h-[240px] overflow-y-auto custom-scrollbar">
                         {chatMessages.map((msg, i) => (
-                          <div 
-                            key={i} 
-                            className={`p-2.5 rounded-lg text-[12px] leading-relaxed max-w-[90%] ${
-                              msg.role === 'user' 
-                                ? 'bg-[#1A1A1D] self-end text-text-primary border border-[#2A2A2D]' 
-                                : 'bg-gold/10 text-gold border border-gold/20 self-start'
+                          <div
+                            key={i}
+                            className={`p-2.5 rounded-lg text-[12px] leading-relaxed ${
+                              msg.role === 'user'
+                                ? 'bg-[#1A1A1D] self-end text-text-primary border border-[#2A2A2D] max-w-[90%]'
+                                : msg.role === 'system'
+                                ? 'text-text-muted text-center text-[11px] italic'
+                                : msg.type === 'success'
+                                ? 'bg-[#183424] text-[#7FD69A] border border-[#254A34] self-start max-w-[95%]'
+                                : msg.type === 'question'
+                                ? 'bg-[#1A2638] text-[#84ADED] border border-[#263750] self-start max-w-[95%]'
+                                : msg.type === 'error'
+                                ? 'bg-[#2D1414] text-red-400 border border-red-900/50 self-start max-w-[95%]'
+                                : 'bg-gold/10 text-gold border border-gold/20 self-start max-w-[95%]'
                             }`}
                           >
                             {msg.content}
@@ -787,7 +901,14 @@ function DraftContent() {
                         ))}
                       </div>
                     )}
-                    
+
+                    {pendingRevisionContext && (
+                      <div className="text-[10px] text-[#84ADED] px-1 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#84ADED] inline-block animate-pulse" />
+                        Waiting for your answer to apply the change…
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2 bg-[#1A1A1D] border border-[#2A2A2D] rounded-lg p-1.5 focus-within:border-gold/50 transition-colors shadow-sm">
                       <div className="pl-2 pr-1 shrink-0">
                         <Sparkles size={14} className="text-gold" />
@@ -796,19 +917,19 @@ function DraftContent() {
                         type="text"
                         value={revisionQuery}
                         onChange={(e) => setRevisionQuery(e.target.value)}
-                        placeholder="Ask AI about this document..."
+                        placeholder={pendingRevisionContext ? 'Provide the missing details…' : 'Ask or tell AI what to change…'}
                         className="bg-transparent w-full min-w-0 text-[12px] text-text-primary outline-none focus:outline-none focus:ring-0 border-none placeholder:text-text-muted"
-                        onKeyDown={(e) => e.key === 'Enter' && handleAskAI()}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAIMessage()}
                       />
                       <button
-                        onClick={handleAskAI}
+                        onClick={handleAIMessage}
                         disabled={isRevising || !revisionQuery.trim()}
                         className="bg-gold text-[#0a0a0b] shrink-0 px-3 py-1.5 rounded text-[11px] font-bold tracking-wide transition-colors hover:bg-[#D4B254] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                       >
                         {isRevising ? (
                           <Loader2 size={12} className="animate-spin" />
                         ) : (
-                          'Ask'
+                          'Send'
                         )}
                       </button>
                     </div>

@@ -302,6 +302,7 @@ textarea,
 }
 
 /* ── PROSEMIRROR (TIPTAP) STYLES ─────────────────────────── */
+
 .ProseMirror {
   font-family: 'Times New Roman', Times, serif;
   outline: none !important;

@@ -130,10 +130,18 @@ export function parseTemplateToHTML(rawText: string) {
   let isFirstNonEmpty = true;
 
   const processInline = (text: string) => {
-    return text.replace(/\{\{(.*?)\}\}/g, (match, p1) => {
+    let res = text.replace(/\{\{(.*?)\}\}/g, (match, p1) => {
       const fieldId = p1.trim();
+      if (fieldId.toLowerCase().includes('signature') || fieldId.toLowerCase().includes('sign')) {
+        return `<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>`;
+      }
       return `<span data-type="template-placeholder" fieldid="${fieldId}">${fieldId}</span>`;
     });
+    // Replace raw underscore lines (2 or more underscores) with standard HTML underline
+    res = res.replace(/(?<!_)_{2,}(?!_)/g, () => {
+      return `<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>`;
+    });
+    return res;
   };
 
   for (let i = 0; i < lines.length; i++) {

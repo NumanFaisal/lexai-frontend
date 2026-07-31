@@ -64,11 +64,10 @@ function SecondaryNav({ activeMode }: { activeMode: ChatMode }) {
             <button
               key={tab.value}
               onClick={() => router.push(tab.href)}
-              className={`text-[13px] font-medium transition-colors relative pb-1 ${
-                isActive
+              className={`text-[13px] font-medium transition-colors relative pb-1 ${isActive
                   ? 'text-gold after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-gold'
                   : 'text-text-secondary hover:text-text-primary'
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -102,11 +101,10 @@ function CitationBadge({
     </>
   );
 
-  const className = `inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-mono text-[11px] leading-[1.3] transition-colors ${
-    citation.verified
+  const className = `inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-mono text-[11px] leading-[1.3] transition-colors ${citation.verified
       ? 'bg-[#C9A84C1A] border border-[#C9A84C4D] text-gold hover:bg-[#C9A84C2D]'
       : 'bg-[#BE7B7B1A] border border-[#BE7B7B66] text-error hover:bg-[#BE7B7B2D]'
-  }`;
+    }`;
 
   if (url) {
     return (
@@ -136,11 +134,11 @@ const normalizeMode = (m: string): ChatMode => {
 };
 
 //  Message Bubble 
-function MessageBubble({ 
+function MessageBubble({
   message,
   onFillCompliance,
   onEditCompliance
-}: { 
+}: {
   message: ChatMessage;
   onFillCompliance?: (data: { businessType: string; state: string; headcount: number; revenueBracket: string }) => void;
   onEditCompliance?: (content: string) => void;
@@ -153,7 +151,7 @@ function MessageBubble({
   const cleanContent = message.content.replace('[INFO_REQUIRED]', '').trim();
 
   // Local state for interactive compliance items
-  const [items, setItems] = useState<any[]>( (message as any).complianceItems || [] );
+  const [items, setItems] = useState<any[]>((message as any).complianceItems || []);
   const [editingNotes, setEditingNotes] = useState<{ [itemId: string]: string }>({});
   const [showNotesForm, setShowNotesForm] = useState<{ [itemId: string]: boolean }>({});
   const [isChecklistExpanded, setIsChecklistExpanded] = useState(false);
@@ -170,7 +168,7 @@ function MessageBubble({
   const toggleItem = async (itemId: string, currentStatus: boolean) => {
     if (!reportId) return;
     const newStatus = !currentStatus;
-    
+
     // Optimistic update
     setItems(prev => prev.map(item => item.id === itemId ? { ...item, isCompleted: newStatus } : item));
 
@@ -250,7 +248,7 @@ function MessageBubble({
               clearInterval(interval);
               setIsExporting(false);
               toast.success('PDF generated successfully! Starting download...', { id: `pdf-export-${reportId}` });
-              
+
               const pdfUrl = reportRes.data.data.pdfUrl;
               const link = document.createElement('a');
               link.href = pdfUrl;
@@ -364,9 +362,8 @@ function MessageBubble({
             <GavelLoader isThinking={true} />
           ) : (
             <div
-              className={`prose-chat text-[13px] leading-[1.75] text-[#C8C3B8] ${
-                message.isStreaming ? 'typing-cursor' : ''
-              }`}
+              className={`prose-chat text-[13px] leading-[1.75] text-[#C8C3B8] ${message.isStreaming ? 'typing-cursor' : ''
+                }`}
               dangerouslySetInnerHTML={{
                 __html: formatMarkdown(cleanContent),
               }}
@@ -450,7 +447,7 @@ function MessageBubble({
           {/* Interactive Compliance Checklist Items */}
           {!message.isStreaming && items && items.length > 0 && (
             <div className="mt-4 border-t border-border-default/20 pt-4 space-y-3">
-              <div 
+              <div
                 onClick={() => setIsChecklistExpanded(!isChecklistExpanded)}
                 className="flex items-center justify-between cursor-pointer group pb-1"
               >
@@ -513,16 +510,15 @@ function MessageBubble({
               {isChecklistExpanded && (
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
                   {items.map((item) => (
-                    <div 
+                    <div
                       key={item.id}
-                      className={`p-3 rounded-lg border transition-all duration-150 ${
-                        item.isCompleted 
-                          ? 'bg-[#18181b]/40 border-success/15 opacity-70' 
+                      className={`p-3 rounded-lg border transition-all duration-150 ${item.isCompleted
+                          ? 'bg-[#18181b]/40 border-success/15 opacity-70'
                           : 'bg-bg-secondary border-border-default hover:border-gold/30'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-start gap-2.5">
-                        <input 
+                        <input
                           type="checkbox"
                           checked={!!item.isCompleted}
                           onChange={() => toggleItem(item.id, !!item.isCompleted)}
@@ -544,7 +540,7 @@ function MessageBubble({
                               </span>
                             )}
                           </div>
-                          
+
                           <div className="text-[11px] text-text-secondary space-y-0.5 pt-0.5 leading-relaxed">
                             <div><span className="text-text-muted">Law:</span> <span className="text-text-primary">{item.law}{item.section ? ` (Section ${item.section})` : ''}</span></div>
                             <div><span className="text-text-muted">Requirement:</span> <span className="text-text-primary">{item.requirement}</span></div>
@@ -559,7 +555,7 @@ function MessageBubble({
                               Note: {item.notes}
                             </div>
                           )}
-                          
+
                           {/* Note forms edit */}
                           {showNotesForm[item.id] ? (
                             <div className="mt-2 flex items-center gap-2">
@@ -774,7 +770,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
               clearInterval(interval);
               setExportingReports(prev => ({ ...prev, [rId]: false }));
               toast.success('PDF generated successfully! Starting download...', { id: `pdf-export-${rId}` });
-              
+
               const pdfUrl = reportRes.data.data.pdfUrl;
               const link = document.createElement('a');
               link.href = pdfUrl;
@@ -1003,14 +999,14 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     if (!content && mode !== 'compliance') return;
     if (isStreaming) return;
 
-      // Check limit
-      if (isAtLimit) return;
+    // Check limit
+    if (isAtLimit) return;
 
-      // Clear input
-      dispatch(setInputValue(''));
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
+    // Clear input
+    dispatch(setInputValue(''));
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
 
     const tempConvId = activeConversationId || `temp_${Date.now()}`;
 
@@ -1030,7 +1026,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       createdAt: new Date().toISOString(),
     };
 
-      dispatch(addMessage(userMsg));
+    dispatch(addMessage(userMsg));
 
     // If no active conversation, create a temporary one in store
     if (!activeConversationId) {
@@ -1074,8 +1070,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       createdAt: new Date().toISOString(),
     };
 
-      dispatch(addMessage(assistantMsg));
-      dispatch(setIsStreaming(true));
+    dispatch(addMessage(assistantMsg));
+    dispatch(setIsStreaming(true));
 
     try {
       let response;
@@ -1203,7 +1199,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
             updates: {
               content: "**Rate limit exceeded.** You have reached your query limit for this plan. Please upgrade your plan or try again later.",
               isStreaming: false,
-              confidence:"low",
+              confidence: "low",
             },
           })
         );
@@ -1260,7 +1256,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     }
 
   }, [searchParams, isStreaming, dispatch, sendMessage]);
-  
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -1269,7 +1265,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   };
 
   const canSend = inputValue.trim().length >= 2 && !isStreaming && !isAtLimit;
-    
+
   return (
     <div className="flex h-full flex-col">
       {/* Messages area */}
@@ -1284,9 +1280,9 @@ function ChatContent({ mode }: { mode: ChatMode }) {
           ) : (
             <>
               {messages.map((msg) => (
-                <MessageBubble 
-                  key={msg.id} 
-                  message={msg} 
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
                   onFillCompliance={(data) => {
                     setComplianceData(prev => {
                       const updated = { ...prev, ...data };
@@ -1320,8 +1316,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
                     Something went wrong.{' '}
                     <button
                       onClick={() => {
-                        setRetryMessageId(null); 
-                        sendMessage(); 
+                        setRetryMessageId(null);
+                        sendMessage();
                       }}
                       className="inline-flex items-center gap-1 text-gold hover:text-gold-hover"
                     >
@@ -1344,7 +1340,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       {/* Input bar */}
       <div className="border-t border-border-default bg-bg-primary px-4 pb-4 pt-3 lg:px-6">
         <div className={`mx-auto transition-all duration-300 ${mode === 'compliance' || mode === 'case' ? 'max-w-[1000px]' : 'max-w-[720px]'}`}>
-          
+
           {/* Uploaded File Pill Indicator */}
           {uploadedFile && (
             <div className="mb-2 flex items-center justify-between rounded-lg border border-gold-border/30 bg-gold-subtle/10 px-3 py-1.5 text-[12px] text-gold">
@@ -1387,7 +1383,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
                       Hide
                     </button>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {/* Business Type */}
                     <div className="flex flex-col gap-1.5">
@@ -1481,9 +1477,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
           </AnimatePresence>
 
           <div
-            className={`bg-bg-secondary flex items-end gap-2.5 rounded-[14px] border px-3.5 py-2.5 transition-colors duration-200 ${
-              inputValue.trim() ? 'border-gold-border' : 'border-border-default'
-            }`}
+            className={`bg-bg-secondary flex items-end gap-2.5 rounded-[14px] border px-3.5 py-2.5 transition-colors duration-200 ${inputValue.trim() ? 'border-gold-border' : 'border-border-default'
+              }`}
           >
             {/* Model Selector Dropdown */}
             <div className="relative flex-shrink-0" ref={dropdownRef}>
@@ -1529,11 +1524,10 @@ function ChatContent({ mode }: { mode: ChatMode }) {
                             setSelectedModel(model.id);
                             setModelDropdownOpen(false);
                           }}
-                          className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[12px] transition-colors ${
-                            isSelected
+                          className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[12px] transition-colors ${isSelected
                               ? 'bg-gold-subtle text-gold'
                               : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-2">
                             <Icon size={14} className={model.color} />
@@ -1579,11 +1573,10 @@ function ChatContent({ mode }: { mode: ChatMode }) {
               <button
                 type="button"
                 onClick={() => setShowComplianceForm(!showComplianceForm)}
-                className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] border transition-all duration-200 ${
-                  showComplianceForm
+                className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] border transition-all duration-200 ${showComplianceForm
                     ? 'bg-gold-subtle text-gold border-gold-border'
                     : 'bg-bg-tertiary text-text-secondary hover:text-text-primary hover:bg-bg-elevated border-border-default'
-                }`}
+                  }`}
                 title="Toggle Compliance Data Form"
               >
                 <Briefcase size={16} strokeWidth={1.5} />
@@ -1604,9 +1597,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading || isAtLimit}
-                  className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] bg-bg-tertiary transition-all duration-200 hover:bg-bg-elevated ${
-                    isUploading ? 'text-gold animate-pulse' : 'text-text-secondary hover:text-text-primary'
-                  }`}
+                  className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] bg-bg-tertiary transition-all duration-200 hover:bg-bg-elevated ${isUploading ? 'text-gold animate-pulse' : 'text-text-secondary hover:text-text-primary'
+                    }`}
                   title="Upload Case Document (PDF, DOCX, Image, Audio. Max 15MB)"
                 >
                   <Paperclip size={16} strokeWidth={1.5} />
@@ -1618,11 +1610,10 @@ function ChatContent({ mode }: { mode: ChatMode }) {
             <button
               onClick={() => sendMessage()}
               disabled={!canSend}
-              className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] transition-all duration-200 ${
-                canSend
+              className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] transition-all duration-200 ${canSend
                   ? 'from-gold to-gold/80 text-bg-primary bg-gradient-to-br'
                   : 'bg-bg-tertiary text-text-disabled'
-              }`}
+                }`}
             >
               <Send size={16} strokeWidth={1.5} />
             </button>
