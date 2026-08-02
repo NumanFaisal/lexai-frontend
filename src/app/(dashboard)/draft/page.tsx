@@ -239,6 +239,11 @@ function DraftContent() {
 
   // ─── HANDLERS ─────────────────────────────────────────────────────────────
 
+  const getSaveUrl = (docId: string) => {
+    const doc = documents.find((d) => d.id === docId);
+    return doc?.source === 'draft' ? `/drafts/${docId}` : `/documents/${docId}`;
+  };
+
   const handleSave = async () => {
     if (!activeDocumentId) return;
     const currentDoc = documents.find((d) => d.id === activeDocumentId);
@@ -246,7 +251,7 @@ function DraftContent() {
     
     dispatch(setSaveStatus('saving'));
     try {
-      await api.put(`/documents/${activeDocumentId}`, { 
+      await api.put(getSaveUrl(activeDocumentId), { 
         title: currentDoc.title,
         content: currentDoc.content 
       });
@@ -404,6 +409,7 @@ function DraftContent() {
             content: d.content || '',
             status: d.status === 'FINALIZED' ? 'final' : 'draft',
             mode: 'draft',
+            source: 'document' as const,
             createdAt: d.createdAt,
             updatedAt: d.updatedAt,
           }));
@@ -440,7 +446,7 @@ function DraftContent() {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(async () => {
         try {
-          await api.put(`/documents/${activeDocumentId}`, { content });
+          await api.put(getSaveUrl(activeDocumentId), { content });
           dispatch(setSaveStatus('saved'));
           // Refresh AI suggestions after autosave
           fetchSuggestions(activeDocumentId, false);
@@ -451,7 +457,7 @@ function DraftContent() {
         }
       }, 1500);
     },
-    [activeDocumentId, dispatch, fetchSuggestions]
+    [activeDocumentId, dispatch, fetchSuggestions, documents]
   );
 
   const selectDocument = (id: string) => {
@@ -475,6 +481,7 @@ function DraftContent() {
           content: d.content || '',
           status: 'draft',
           mode: 'draft',
+          source: 'document',
           createdAt: d.createdAt || new Date().toISOString(),
           updatedAt: d.updatedAt || new Date().toISOString(),
         };
@@ -668,6 +675,7 @@ function DraftContent() {
                             content: d.content,
                             status: 'draft',
                             mode: 'draft',
+                            source: 'draft',
                             createdAt: d.createdAt,
                             updatedAt: d.updatedAt,
                           };

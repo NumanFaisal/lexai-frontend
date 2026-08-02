@@ -16,10 +16,12 @@ import {
   Plus,
   MessageSquare,
   Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setMobileSidebarOpen } from '@/store/slices/uiSlice';
-import { clearChat, setActiveMode } from '@/store/slices/chatSlice';
+import { clearChat, setActiveMode, removeConversation } from '@/store/slices/chatSlice';
+
 import { sidebarTransition, backdropTransition } from '@/lib/animations';
 import { groupConversationsByDate } from '@/lib/dateUtils';
 import api from '@/lib/axios';
@@ -54,6 +56,11 @@ function SidebarContent() {
   const { conversations, activeConversationId } = useAppSelector((s) => s.chat);
   const dispatch = useAppDispatch();
   const [complianceReports, setComplianceReports] = useState<any[]>([]);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; conv: any | null; loading: boolean }>({
+    open: false,
+    conv: null,
+    loading: false,
+  });
 
   const closeMobile = () => dispatch(setMobileSidebarOpen(false));
 
@@ -130,26 +137,41 @@ function SidebarContent() {
     closeMobile();
   };
 
-  const handleDeleteConv = async (e: React.MouseEvent, conv: any) => {
+  const openDeleteModal = (e: React.MouseEvent, conv: any) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to permanently delete this item?')) return;
+    setDeleteModal({ open: true, conv, loading: false });
+  };
 
+  const closeDeleteModal = () => {
+    if (deleteModal.loading) return;
+    setDeleteModal({ open: false, conv: null, loading: false });
+  };
+
+  const confirmDelete = async () => {
+    const conv = deleteModal.conv;
+    if (!conv) return;
+    setDeleteModal((prev) => ({ ...prev, loading: true }));
     try {
       if (conv.mode === 'compliance' || conv.mode === 'COMPLIANCE') {
         const reportId = conv.reportId || conv.id;
         await api.delete(`/compliance/${reportId}`);
         setComplianceReports((prev) => prev.filter((r) => r.id !== reportId));
-        toast.success('Compliance report deleted permanently');
+        dispatch(removeConversation(reportId));
+        toast.success('Compliance report deleted');
       } else {
         await api.delete(`/chat/conversations/${conv.id}`);
+        dispatch(removeConversation(conv.id));
         toast.success('Chat deleted');
       }
-    } catch (err) {
+      setDeleteModal({ open: false, conv: null, loading: false });
+    } catch (err: any) {
       console.error('Failed to delete item:', err);
-      setComplianceReports((prev) => prev.filter((r) => r.id !== (conv.reportId || conv.id)));
-      toast.success('Item removed');
+      const msg = err?.response?.data?.message || 'Failed to delete. Please try again.';
+      toast.error(msg);
+      setDeleteModal((prev) => ({ ...prev, loading: false }));
     }
   };
+
 
   return (
     <div className="flex h-full flex-col bg-[#0D0D0F] border-r border-[#1A1A1D]">
@@ -176,9 +198,9 @@ function SidebarContent() {
       </div>
 
       {/* Scrollable middle container (Navigation + Recent Chats) */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-6 scrollbar-thin">
+      <div className="flex flex-col flex-1 min-h-0 px-3 py-2 gap-6">
         {/* Navigation */}
-        <nav className="space-y-1">
+        <nav className="space-y-1 shrink-0">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             const Icon = item.icon;
@@ -214,11 +236,12 @@ function SidebarContent() {
         </nav>
 
         {/* Recent Chats Section */}
-        <div className="space-y-2">
-          <h3 className="px-3 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+        <div className="flex flex-col flex-1 min-h-0 space-y-2">
+          <h3 className="px-3 text-[10px] font-semibold uppercase tracking-wider text-text-muted shrink-0">
             Recent Chats
           </h3>
-          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+          <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin space-y-3">
+
             {filteredConversations.length === 0 ? (
               <p className="px-3 py-2 text-[11px] text-text-disabled italic">
                 No recent chats
@@ -254,7 +277,7 @@ function SidebarContent() {
                           <span className="truncate flex-1">{conv.title}</span>
                         </button>
                         <button
-                          onClick={(e) => handleDeleteConv(e, conv)}
+                          onClick={(e) => openDeleteModal(e, conv)}
                           className="absolute right-2 opacity-0 group-hover/item:opacity-100 p-1 text-text-muted hover:text-error transition-all cursor-pointer rounded"
                           title="Delete permanently"
                         >
@@ -270,22 +293,79 @@ function SidebarContent() {
         </div>
       </div>
 
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteModal.open && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={closeDeleteModal}
+            />
+            {/* Modal */}
+            <motion.div
+              className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none"
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
+              <div className="pointer-events-auto w-full max-w-[340px] rounded-2xl border border-[#2A2A2D] bg-[#111113] shadow-2xl shadow-black/60 p-6 flex flex-col gap-4">
+                {/* Icon + Title */}
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-error/10 border border-error/20">
+                    <AlertTriangle size={20} className="text-error" strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <h2 className="text-[15px] font-semibold text-text-primary leading-tight">Delete chat?</h2>
+                    <p className="mt-1 text-[12px] text-text-muted leading-relaxed">
+                      <span className="font-medium text-text-secondary line-clamp-1">
+                        &ldquo;{deleteModal.conv?.title || 'This chat'}&rdquo;
+                      </span>{' '}
+                      will be permanently deleted and cannot be recovered.
+                    </p>
+                  </div>
+                </div>
 
-      {/* New Research Button */}
-      <div className="mb-4 shrink-0 px-3">
-        <button
-          onClick={() => {
-            dispatch(clearChat());
-            dispatch(setActiveMode('research'));
-            router.push('/chat');
-            closeMobile();
-          }}
-          className="bg-gold hover:bg-gold-hover shadow-gold/10 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold text-[#0a0a0b] shadow-md transition-colors"
-        >
-          <Plus size={16} strokeWidth={2} />
-          New Research
-        </button>
-      </div>
+                {/* Actions */}
+                <div className="flex gap-2 mt-1">
+                  <button
+                    onClick={closeDeleteModal}
+                    disabled={deleteModal.loading}
+                    className="flex-1 rounded-lg border border-[#2A2A2D] bg-transparent px-4 py-2 text-[13px] font-medium text-text-secondary hover:bg-[#1A1A1D] hover:text-text-primary transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    disabled={deleteModal.loading}
+                    className="flex-1 rounded-lg bg-error/90 hover:bg-error px-4 py-2 text-[13px] font-semibold text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    {deleteModal.loading ? (
+                      <>
+                        <span className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                        Deleting…
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={13} strokeWidth={2} />
+                        Delete
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+
+
 
       {/* Settings & Support Links */}
       <div className="space-y-1 border-t border-[#1A1A1D] px-3 py-2">
@@ -371,8 +451,8 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="hidden w-[240px] flex-shrink-0 lg:block">
+      {/* Desktop sidebar — width controlled by animated wrapper in layout */}
+      <aside className="hidden lg:block h-full w-full">
         <SidebarContent />
       </aside>
 

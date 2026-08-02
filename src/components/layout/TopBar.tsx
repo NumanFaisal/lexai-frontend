@@ -4,9 +4,10 @@ import { useRef, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Menu, Plus, Settings, CreditCard, LogOut, ChevronDown, Search, Bell } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/store';
-import { toggleMobileSidebar, setUserMenuOpen } from '@/store/slices/uiSlice';
+import { toggleMobileSidebar, toggleSidebar, setUserMenuOpen } from '@/store/slices/uiSlice';
+
 import { clearUser } from '@/store/slices/authSlice';
-import { clearChat } from '@/store/slices/chatSlice';
+import { clearChat, setActiveMode } from '@/store/slices/chatSlice';
 import { logout } from '@/lib/auth';
 import { MODE_DATA } from '@/lib/mock-data';
 import type { ChatMode } from '@/lib/types';
@@ -53,6 +54,7 @@ export default function TopBar() {
 
   const handleNewChat = () => {
     dispatch(clearChat());
+    dispatch(setActiveMode('research'));
     router.push('/chat');
   };
 
@@ -63,9 +65,18 @@ export default function TopBar() {
     <header className="border-border-default bg-bg-secondary flex h-[56px] flex-shrink-0 items-center justify-between border-b px-4">
       {/* Left: Mobile hamburger + page/mode context */}
       <div className="flex flex-1 items-center gap-4">
+        {/* Desktop sidebar toggle */}
+        <button
+          onClick={() => dispatch(toggleSidebar())}
+          className="border-border-default hover:bg-bg-tertiary hidden lg:flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[7px] border transition-colors"
+          title="Toggle sidebar"
+        >
+          <Menu size={16} strokeWidth={1.5} className="text-text-secondary" />
+        </button>
+        {/* Mobile sidebar toggle */}
         <button
           onClick={() => dispatch(toggleMobileSidebar())}
-          className="border-border-default hover:bg-bg-tertiary flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[7px] border transition-colors lg:hidden"
+          className="border-border-default hover:bg-bg-tertiary flex lg:hidden h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[7px] border transition-colors"
         >
           <Menu size={16} strokeWidth={1.5} className="text-text-secondary" />
         </button>
@@ -123,15 +134,13 @@ export default function TopBar() {
 
       {/* Right: Actions + Upgrade + Notification + User Menu */}
       <div className="ml-4 flex shrink-0 items-center gap-3">
-        {pathname === '/chat' && (
-          <button
-            onClick={handleNewChat}
-            className="border-border-default text-text-muted hover:border-gold-border hover:text-gold hidden items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] transition-colors md:flex"
-          >
-            <Plus size={14} strokeWidth={1.5} />
-            New chat
-          </button>
-        )}
+        <button
+          onClick={handleNewChat}
+          className="bg-gold hover:bg-gold-hover flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-semibold text-[#0a0a0b] transition-colors shadow-sm shadow-gold/20 md:flex hidden"
+        >
+          <Plus size={14} strokeWidth={2} />
+          New Chat
+        </button>
 
         <button
           onClick={() => router.push('/pricing')}

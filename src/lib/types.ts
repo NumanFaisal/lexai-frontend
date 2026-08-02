@@ -74,6 +74,8 @@ export interface Document {
   mode: ChatMode;
   createdAt: string;
   updatedAt: string;
+  /** 'draft' = stored in the Draft table (PUT /drafts/:id); 'document' = stored in Document table (PUT /documents/:id) */
+  source?: 'document' | 'draft';
 }
 
 export interface UsageStats {

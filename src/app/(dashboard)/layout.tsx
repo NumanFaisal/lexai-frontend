@@ -17,6 +17,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { isInitialized, isAuthenticated } = useAppSelector((s) => s.auth);
+  const { sidebarOpen } = useAppSelector((s) => s.ui);
+
 
   // 1. Hydrate the user session on first load
   useEffect(() => {
@@ -94,8 +96,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="bg-bg-primary flex h-screen overflow-hidden">
-      {/* Sidebar — persists, never unmounts */}
-      <Sidebar />
+      {/* Desktop Sidebar — animated open/close */}
+      <motion.div
+        className="hidden lg:block flex-shrink-0 overflow-hidden"
+        animate={{ width: sidebarOpen ? 240 : 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      >
+        <div className="w-[240px] h-full">
+          <Sidebar />
+        </div>
+      </motion.div>
+
+      {/* Mobile sidebar (handled inside Sidebar component itself) */}
+      <div className="lg:hidden">
+        <Sidebar />
+      </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* TopBar — persists, content changes based on active route */}
