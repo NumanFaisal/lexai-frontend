@@ -107,7 +107,7 @@ function DraftContent() {
   };
 
   const fetchSuggestions = useCallback(async (docId: string, resetChat = false) => {
-    if (!docId) return;
+    if (!docId || docId === 'doc_initial' || docId.startsWith('temp_')) return;
     if (resetChat) {
       setChatMessages([WELCOME_MESSAGE]);
       setPendingRevisionContext(null);
@@ -118,8 +118,10 @@ function DraftContent() {
       if (res.data?.success && res.data.data.suggestions) {
         setSuggestions(res.data.data.suggestions);
       }
-    } catch (err) {
-      console.error('Error fetching suggestions:', err);
+    } catch (err: any) {
+      if (err?.response?.status !== 404) {
+        console.error('Error fetching suggestions:', err);
+      }
     } finally {
       setIsLoadingSuggestions(false);
     }

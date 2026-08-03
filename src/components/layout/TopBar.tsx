@@ -54,8 +54,20 @@ export default function TopBar() {
 
   const handleNewChat = () => {
     dispatch(clearChat());
-    dispatch(setActiveMode('research'));
-    router.push('/chat');
+
+    if (pathname.startsWith('/case')) {
+      dispatch(setActiveMode('case'));
+      router.push('/case');
+    } else if (pathname.startsWith('/draft')) {
+      dispatch(setActiveMode('draft'));
+      router.push('/draft');
+    } else if (pathname.startsWith('/compliance')) {
+      dispatch(setActiveMode('compliance'));
+      router.push('/compliance');
+    } else {
+      dispatch(setActiveMode('research'));
+      router.push('/chat');
+    }
   };
 
   const currentMode = MODE_DATA[activeMode as ChatMode];

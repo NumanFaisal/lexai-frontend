@@ -49,8 +49,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           avatarInitials: (backendUser.name || 'U').substring(0, 2).toUpperCase(),
           createdAt: new Date().toISOString(),
         }));
-      } catch (error) {
-        console.error('Failed to hydrate session:', error);
+      } catch (error: any) {
+        if (error?.response?.status !== 401 && error?.response?.status !== 404) {
+          console.error('Failed to hydrate session:', error);
+        }
         localStorage.removeItem('token');
         document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
         dispatch(clearUser());

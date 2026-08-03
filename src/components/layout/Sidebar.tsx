@@ -116,6 +116,25 @@ function SidebarContent() {
     return chatConvs;
   }, [conversations, currentScreenMode, complianceReports]);
 
+  const handleNewChat = () => {
+    dispatch(clearChat());
+
+    if (pathname.startsWith('/case')) {
+      dispatch(setActiveMode('case'));
+      router.push('/case');
+    } else if (pathname.startsWith('/draft')) {
+      dispatch(setActiveMode('draft'));
+      router.push('/draft');
+    } else if (pathname.startsWith('/compliance')) {
+      dispatch(setActiveMode('compliance'));
+      router.push('/compliance');
+    } else {
+      dispatch(setActiveMode('research'));
+      router.push('/chat');
+    }
+    closeMobile();
+  };
+
   const handleConvClick = (conv: any) => {
     if (conv.mode === 'compliance' || conv.mode === 'COMPLIANCE') {
       const targetId = conv.reportId || conv.id;
@@ -237,9 +256,19 @@ function SidebarContent() {
 
         {/* Recent Chats Section */}
         <div className="flex flex-col flex-1 min-h-0 space-y-2">
-          <h3 className="px-3 text-[10px] font-semibold uppercase tracking-wider text-text-muted shrink-0">
-            Recent Chats
-          </h3>
+          <div className="flex items-center justify-between px-3 shrink-0">
+            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+              Recent Chats
+            </h3>
+            <button
+              onClick={handleNewChat}
+              className="flex items-center gap-1 text-[11px] font-medium text-gold hover:text-gold-hover transition-colors"
+              title="Start New Chat on Current Screen"
+            >
+              <Plus size={13} />
+              New Chat
+            </button>
+          </div>
           <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin space-y-3">
 
             {filteredConversations.length === 0 ? (

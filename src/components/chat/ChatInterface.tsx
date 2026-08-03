@@ -819,8 +819,14 @@ function ChatContent({ mode }: { mode: ChatMode }) {
           if (res.data && (res.data.success || res.data.status === 'success')) {
             setComplianceReports(res.data.data || []);
           }
-        } catch (err) {
-          console.error('Failed to fetch compliance reports:', err);
+        } catch (err: any) {
+          if (err.response?.status === 404) {
+            console.warn(`Compliance report ${urlReportId} not found.`);
+            dispatch(clearChat());
+            router.replace(pathname);
+          } else {
+            console.error('Failed to fetch compliance details:', err);
+          }
         }
       };
       fetchReports();
@@ -935,8 +941,19 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
             dispatch(setMessages([userMsg, assistantMsg]));
           }
-        } catch (err) {
-          console.error('Failed to load compliance report details via GET /api/v1/compliance/:reportId:', err);
+        } catch (err: any) {
+          if (err?.response?.status === 404) {
+            console.warn(`Compliance report ${urlReportId} no longer exists. Resetting URL.`);
+            dispatch(clearChat());
+            if (typeof window !== 'undefined') {
+              const newUrl = new URL(window.location.href);
+              newUrl.searchParams.delete('reportId');
+              newUrl.searchParams.delete('conversationId');
+              window.history.replaceState({}, '', newUrl.pathname + (newUrl.search || ''));
+            }
+          } else {
+            console.error('Failed to load compliance report details:', err);
+          }
         }
       };
       fetchComplianceDetails();
@@ -994,8 +1011,18 @@ function ChatContent({ mode }: { mode: ChatMode }) {
               });
               dispatch(setMessages(mappedMsgs));
             }
-          } catch (error) {
-            console.error('Error fetching conversation messages:', error);
+          } catch (error: any) {
+            if (error?.response?.status === 404) {
+              console.warn(`Conversation ${urlConvId} no longer exists. Resetting URL.`);
+              dispatch(clearChat());
+              if (typeof window !== 'undefined') {
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.delete('conversationId');
+                window.history.replaceState({}, '', newUrl.pathname + (newUrl.search || ''));
+              }
+            } else {
+              console.error('Error fetching conversation messages:', error);
+            }
           }
         };
         fetchMessages();
