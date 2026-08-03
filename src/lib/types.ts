@@ -102,3 +102,14 @@ export interface PricingFeature {
   text: string;
   included: boolean;
 }
+
+export interface VoiceTranscription {
+  id: string;
+  userId: string;
+  transcript: string;
+  source?: string;
+  detectedLang?: string;
+  duration?: number;
+  createdAt: string;
+}
+

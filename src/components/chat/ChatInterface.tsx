@@ -36,6 +36,8 @@ import ComplianceDashboard from '@/components/chat/ComplianceDashboard';
 import CaseAnalysisDashboard from '@/components/chat/CaseAnalysisDashboard';
 import GavelLoader from '@/components/ui/GavelLoader';
 import api from '@/lib/axios';
+import { VoiceInputModal } from '@/components/chat/VoiceInputModal';
+import { CaseUploadDropdown } from '@/components/chat/CaseUploadDropdown';
 
 const MODELS = [
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', short: 'Gemini 2.0', icon: Sparkles, color: 'text-info' },
@@ -65,8 +67,8 @@ function SecondaryNav({ activeMode }: { activeMode: ChatMode }) {
               key={tab.value}
               onClick={() => router.push(tab.href)}
               className={`text-[13px] font-medium transition-colors relative pb-1 ${isActive
-                  ? 'text-gold after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-gold'
-                  : 'text-text-secondary hover:text-text-primary'
+                ? 'text-gold after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-gold'
+                : 'text-text-secondary hover:text-text-primary'
                 }`}
             >
               {tab.label}
@@ -102,8 +104,8 @@ function CitationBadge({
   );
 
   const className = `inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-mono text-[11px] leading-[1.3] transition-colors ${citation.verified
-      ? 'bg-[#C9A84C1A] border border-[#C9A84C4D] text-gold hover:bg-[#C9A84C2D]'
-      : 'bg-[#BE7B7B1A] border border-[#BE7B7B66] text-error hover:bg-[#BE7B7B2D]'
+    ? 'bg-[#C9A84C1A] border border-[#C9A84C4D] text-gold hover:bg-[#C9A84C2D]'
+    : 'bg-[#BE7B7B1A] border border-[#BE7B7B66] text-error hover:bg-[#BE7B7B2D]'
     }`;
 
   if (url) {
@@ -513,8 +515,8 @@ function MessageBubble({
                     <div
                       key={item.id}
                       className={`p-3 rounded-lg border transition-all duration-150 ${item.isCompleted
-                          ? 'bg-[#18181b]/40 border-success/15 opacity-70'
-                          : 'bg-bg-secondary border-border-default hover:border-gold/30'
+                        ? 'bg-[#18181b]/40 border-success/15 opacity-70'
+                        : 'bg-bg-secondary border-border-default hover:border-gold/30'
                         }`}
                     >
                       <div className="flex items-start gap-2.5">
@@ -659,6 +661,7 @@ function EmptyState({ mode }: { mode: ChatMode }) {
       <p className="text-text-secondary mt-2 max-w-[340px] text-center text-[13px] leading-relaxed">
         {data.description}
       </p>
+
       <div className="mt-6 flex flex-wrap justify-center gap-2">
         {data.quickPrompts.map((prompt) => (
           <button
@@ -731,6 +734,18 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   const [uploadedFile, setUploadedFile] = useState<{ caseId: string; name: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [isUploadDropdownOpen, setIsUploadDropdownOpen] = useState(false);
+  const [selectedAcceptFilter, setSelectedAcceptFilter] = useState<string>('*');
+  const uploadButtonRef = useRef<HTMLButtonElement>(null);
+
+  const handleSelectVoiceTranscription = (transcript: string) => {
+    dispatch(setInputValue(transcript));
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
 
   const [showComplianceForm, setShowComplianceForm] = useState(mode === 'compliance');
   const [complianceData, setComplianceData] = useState({
@@ -812,8 +827,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     }
   }, [mode]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const processCaseFileUpload = async (file: File) => {
     if (!file) return;
 
     // Check size limit: max 15MB
@@ -829,11 +843,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     formData.append('title', file.name);
 
     try {
-      const response = await api.post('/case-analysis/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await api.post('/case-analysis/upload', formData);
 
       if (response.data.success && response.data.data) {
         const caseId = response.data.data.caseId;
@@ -848,9 +858,26 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = ''; // reset file input
+        fileInputRef.current.value = '';
       }
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processCaseFileUpload(file);
+    }
+  };
+
+  const handleSelectFormat = (acceptFilter: string) => {
+    setSelectedAcceptFilter(acceptFilter);
+    setTimeout(() => {
+      if (fileInputRef.current) {
+        fileInputRef.current.accept = acceptFilter;
+        fileInputRef.current.click();
+      }
+    }, 50);
   };
 
   // Close dropdown on outside click
@@ -1525,8 +1552,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
                             setModelDropdownOpen(false);
                           }}
                           className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[12px] transition-colors ${isSelected
-                              ? 'bg-gold-subtle text-gold'
-                              : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
+                            ? 'bg-gold-subtle text-gold'
+                            : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
                             }`}
                         >
                           <div className="flex items-center gap-2">
@@ -1560,10 +1587,13 @@ function ChatContent({ mode }: { mode: ChatMode }) {
               style={{ maxHeight: '120px' }}
             />
 
-            {/* Voice button (placeholder) */}
+            {/* Voice button */}
             <button
-              className="bg-bg-tertiary text-info hover:bg-bg-elevated flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] transition-colors"
-              title="Voice input (Pro feature)"
+              type="button"
+              onClick={() => setIsVoiceModalOpen(true)}
+              disabled={isAtLimit}
+              className="bg-bg-tertiary text-info hover:bg-bg-elevated flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] transition-colors disabled:opacity-50"
+              title="Voice input & history"
             >
               <Mic size={16} strokeWidth={1.5} />
             </button>
@@ -1574,8 +1604,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
                 type="button"
                 onClick={() => setShowComplianceForm(!showComplianceForm)}
                 className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] border transition-all duration-200 ${showComplianceForm
-                    ? 'bg-gold-subtle text-gold border-gold-border'
-                    : 'bg-bg-tertiary text-text-secondary hover:text-text-primary hover:bg-bg-elevated border-border-default'
+                  ? 'bg-gold-subtle text-gold border-gold-border'
+                  : 'bg-bg-tertiary text-text-secondary hover:text-text-primary hover:bg-bg-elevated border-border-default'
                   }`}
                 title="Toggle Compliance Data Form"
               >
@@ -1585,25 +1615,34 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
             {/* File Upload Button (Only for Case Analysis mode) */}
             {mode === 'case' && (
-              <>
+              <div className="relative">
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
-                  accept=".pdf,.docx,image/*,audio/*"
+                  accept={selectedAcceptFilter}
                   className="hidden"
                 />
+                <CaseUploadDropdown
+                  isOpen={isUploadDropdownOpen}
+                  onClose={() => setIsUploadDropdownOpen(false)}
+                  onSelectFormat={handleSelectFormat}
+                  triggerRef={uploadButtonRef}
+                  align="right"
+                />
                 <button
+                  ref={uploadButtonRef}
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setIsUploadDropdownOpen(!isUploadDropdownOpen)}
                   disabled={isUploading || isAtLimit}
-                  className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] bg-bg-tertiary transition-all duration-200 hover:bg-bg-elevated ${isUploading ? 'text-gold animate-pulse' : 'text-text-secondary hover:text-text-primary'
-                    }`}
-                  title="Upload Case Document (PDF, DOCX, Image, Audio. Max 15MB)"
+                  className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] bg-bg-tertiary transition-all duration-200 hover:bg-bg-elevated ${
+                    isUploading ? 'text-gold animate-pulse' : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                  title="Upload Case Document (Select PDF, DOCX, Image, Audio. Max 15MB)"
                 >
                   <Paperclip size={16} strokeWidth={1.5} />
                 </button>
-              </>
+              </div>
             )}
 
             {/* Send button */}
@@ -1611,8 +1650,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
               onClick={() => sendMessage()}
               disabled={!canSend}
               className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[9px] transition-all duration-200 ${canSend
-                  ? 'from-gold to-gold/80 text-bg-primary bg-gradient-to-br'
-                  : 'bg-bg-tertiary text-text-disabled'
+                ? 'from-gold to-gold/80 text-bg-primary bg-gradient-to-br'
+                : 'bg-bg-tertiary text-text-disabled'
                 }`}
             >
               <Send size={16} strokeWidth={1.5} />
@@ -1626,6 +1665,13 @@ function ChatContent({ mode }: { mode: ChatMode }) {
           </div>
         </div>
       </div>
+
+      {/* Voice Input & Transcriptions Modal */}
+      <VoiceInputModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onSelectTranscription={handleSelectVoiceTranscription}
+      />
     </div>
   );
 }
