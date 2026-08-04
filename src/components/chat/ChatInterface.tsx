@@ -899,6 +899,15 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     }
   }, [modelDropdownOpen]);
 
+  const loadedConvIdRef = useRef<string | null>(null);
+
+  // Extract URL param strings OUTSIDE the effect so only string changes trigger it.
+  // DO NOT use `searchParams` object as a dep — Next.js App Router creates a new
+  // object reference on every render, which would re-run fetchMessages after every
+  // addMessage/appendToMessage dispatch and wipe the live chat thread.
+  const urlConvIdStr = searchParams.get('conversationId') || '';
+  const urlReportIdStr = searchParams.get('reportId') || '';
+
   // Sync page mode and load/clear conversation history based on active route
   useEffect(() => {
     dispatch(setActiveMode(mode));
@@ -908,11 +917,27 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       setSelectedModel('gemini-2.0-flash');
     }
 
-    const urlReportId = searchParams.get('reportId');
-    const urlConvId = searchParams.get('conversationId');
+    const urlReportId = urlReportIdStr || null;
+    const urlConvId = urlConvIdStr || null;
+    const targetId = urlReportId || urlConvId;
+
+    if (!targetId) {
+      loadedConvIdRef.current = null;
+      dispatch(clearChat());
+      return;
+    }
+
+    // Always keep activeConversationId in Redux in sync with URL
+    dispatch(setActiveConversation(targetId));
+
+    // Don't refetch and wipe state if already loaded this conversation
+    if (loadedConvIdRef.current === targetId) {
+      return;
+    }
+
+    loadedConvIdRef.current = targetId;
 
     if (urlReportId) {
-      dispatch(setActiveConversation(urlReportId));
       const fetchComplianceDetails = async () => {
         try {
           const res = await api.get(`/compliance/${urlReportId}`);
@@ -960,7 +985,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     } else if (urlConvId) {
       dispatch(setActiveConversation(urlConvId));
 
-      if (urlConvId.startsWith('conv_')) {
+      if (urlConvId.startsWith('conv_') && MOCK_MESSAGES[urlConvId]) {
         // Fallback to mock data if it's a mock conversation
         const msgs = MOCK_MESSAGES[urlConvId] || [];
         dispatch(setMessages(msgs));
@@ -1028,10 +1053,11 @@ function ChatContent({ mode }: { mode: ChatMode }) {
         fetchMessages();
       }
     } else {
-      // Never show previous chat by default when opening the chat screen
+      // No conversation in URL — clear chat
       dispatch(clearChat());
     }
-  }, [mode, searchParams, dispatch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, urlConvIdStr, urlReportIdStr, dispatch]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -1085,6 +1111,8 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     // If no active conversation, create a temporary one in store
     if (!activeConversationId) {
       const initialTitle = content.slice(0, 40) + (content.length > 40 ? '...' : '');
+      // Pre-mark the ref so the URL change below doesn't trigger a DB re-fetch
+      loadedConvIdRef.current = tempConvId;
       dispatch(setActiveConversation(tempConvId));
       dispatch(
         addConversation({
@@ -1129,11 +1157,14 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
     try {
       let response;
+      const currentConvId = urlConvIdStr || activeConversationId;
+      const conversationIdToSend = (currentConvId && !currentConvId.startsWith('temp_')) ? currentConvId : undefined;
+
       if (mode === 'case') {
         const payload: any = {
           message: content,
           model: selectedModel === 'gemini-2.0-flash' ? 'gpt-4o' : selectedModel,
-          conversationId: activeConversationId && !activeConversationId.startsWith('temp_') && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
+          conversationId: conversationIdToSend,
         };
         if (uploadedFile) {
           payload.caseId = uploadedFile.caseId;
@@ -1143,14 +1174,14 @@ function ChatContent({ mode }: { mode: ChatMode }) {
         response = await api.post('/chat/compliance', {
           message: displayContent,
           model: selectedModel,
-          conversationId: activeConversationId && !activeConversationId.startsWith('temp_') && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
+          conversationId: conversationIdToSend,
           ...activeCompliance,
         });
       } else {
         response = await api.post('/chat/research', {
           message: content,
           model: selectedModel,
-          conversationId: activeConversationId && !activeConversationId.startsWith('temp_') && !activeConversationId.startsWith('conv_') ? activeConversationId : undefined,
+          conversationId: conversationIdToSend,
         });
       }
 
@@ -1192,36 +1223,61 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
         const backendConvId = responseData.data.conversationId || responseData.data.id;
 
-        // Simulate streaming UX
-        const words = responseText.split(' ');
-        for (let i = 0; i < words.length; i++) {
-          await new Promise((r) => setTimeout(r, 20 + Math.random() * 20));
+        const isFromCache = !!(responseData.data?.fromCache || responseData.fromCache);
+
+        if (isFromCache) {
+          // Instant display for cached responses — no typing delay!
           dispatch(
-            appendToMessage({
+            updateMessage({
               id: assistantMsgId,
-              content: (i === 0 ? '' : ' ') + words[i],
+              updates: {
+                content: responseText,
+                isStreaming: false,
+                confidence: 'high',
+                citations: (typeof responseData.data === 'object' ? responseData.data.citations : null) || [],
+              },
+            })
+          );
+        } else {
+          // Smooth chunked streaming for new responses (4 words per tick)
+          const words = responseText.split(' ');
+          const chunkSize = 4;
+          for (let i = 0; i < words.length; i += chunkSize) {
+            const chunk = words.slice(i, i + chunkSize).join(' ');
+            await new Promise((r) => setTimeout(r, 10));
+            dispatch(
+              appendToMessage({
+                id: assistantMsgId,
+                content: (i === 0 ? '' : ' ') + chunk,
+              })
+            );
+          }
+
+          dispatch(
+            updateMessage({
+              id: assistantMsgId,
+              updates: {
+                isStreaming: false,
+                confidence: 'high',
+                citations: (typeof responseData.data === 'object' ? responseData.data.citations : null) || [],
+              },
             })
           );
         }
 
-        dispatch(
-          updateMessage({
-            id: assistantMsgId,
-            updates: {
-              isStreaming: false,
-              confidence: 'high',
-              citations: (typeof responseData.data === 'object' ? responseData.data.citations : null) || [],
-            },
-          })
-        );
-
-        // If the backend returned a new conversation ID, map our local state and URL to it
+        // If the backend returned a conversation ID, ensure state and URL are synced
         const currentActiveId = activeConversationId || tempConvId;
-        if (backendConvId && backendConvId !== currentActiveId) {
-          dispatch(updateConversationId({ oldId: currentActiveId, newId: backendConvId }));
-          router.replace(`/${mode === 'research' ? 'chat' : mode}?conversationId=${backendConvId}`, {
-            scroll: false,
-          });
+        if (backendConvId) {
+          dispatch(setActiveConversation(backendConvId));
+          if (backendConvId !== currentActiveId) {
+            // Pre-mark ref with the new real ID BEFORE router.replace changes searchParams
+            // This prevents the useEffect from re-fetching and wiping the live messages
+            loadedConvIdRef.current = backendConvId;
+            dispatch(updateConversationId({ oldId: currentActiveId, newId: backendConvId }));
+            router.replace(`/${mode === 'research' ? 'chat' : mode}?conversationId=${backendConvId}`, {
+              scroll: false,
+            });
+          }
         }
 
         // Refresh the conversations list to ensure the sidebar shows the new/updated conversation
@@ -1236,6 +1292,20 @@ function ChatContent({ mode }: { mode: ChatMode }) {
           }
         };
         refreshConversations();
+
+        // Save complete conversation thread to backend
+        const targetSyncId = backendConvId || currentActiveId;
+        if (targetSyncId && !targetSyncId.startsWith('temp_')) {
+          const formattedMode = mode === 'research' ? 'RESEARCH' : mode === 'case' ? 'CASE_ANALYSIS' : mode === 'compliance' ? 'COMPLIANCE' : 'DRAFT';
+          api.post('/chat/conversations/save', {
+            conversationId: targetSyncId,
+            mode: formattedMode,
+            messages: messages.concat([
+              { role: 'user', content: displayContent },
+              { role: 'assistant', content: responseText, citations: (typeof responseData.data === 'object' ? responseData.data.citations : null) || [] }
+            ]).map(m => ({ role: m.role, content: m.content, citations: m.citations }))
+          }).catch((e) => console.error('Failed to sync full conversation thread:', e));
+        }
 
       } else {
         throw new Error("Invalid API Response");

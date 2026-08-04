@@ -19,6 +19,7 @@ export function setAuthCookie(email: string): void {
 
 export function clearAuthCookie(): void {
   document.cookie = `${AUTH_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  document.cookie = `token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 }
 
 export function getCurrentUser(): User | null {
@@ -145,5 +146,8 @@ function saveRegisteredUsers(users: Record<string, User & { password: string }>)
 }
 
 export function logout(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('token');
+  }
   clearAuthCookie();
 }

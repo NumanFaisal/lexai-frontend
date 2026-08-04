@@ -49,7 +49,7 @@ export default function TopBar() {
     logout();
     dispatch(clearUser());
     dispatch(clearChat());
-    router.push('/');
+    window.location.href = '/login';
   };
 
   const handleNewChat = () => {

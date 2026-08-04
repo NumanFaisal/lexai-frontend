@@ -37,7 +37,7 @@ export default function SettingsPage() {
     logout();
     dispatch(clearUser());
     dispatch(clearChat());
-    router.push('/');
+    window.location.href = '/login';
   };
 
   const handleToggle = (key: keyof typeof notifications) => {
@@ -51,7 +51,7 @@ export default function SettingsPage() {
     dispatch(clearUser());
     dispatch(clearChat());
     toast.success('Account deleted');
-    router.push('/');
+    window.location.href = '/login';
   };
 
   return (
