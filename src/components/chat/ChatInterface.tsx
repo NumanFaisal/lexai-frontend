@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useRef, useState, useMemo, Suspense } from 'react';
+import { useEffect, useCallback, useRef, useState, useMemo, Suspense, memo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Mic, RotateCcw, CreditCard, ChevronDown, ChevronUp, Check, Brain, Sparkles, Cpu, Paperclip, X, FileText, Briefcase, Trash2, Download } from 'lucide-react';
@@ -136,7 +136,7 @@ const normalizeMode = (m: string): ChatMode => {
 };
 
 //  Message Bubble 
-function MessageBubble({
+const MessageBubble = memo(function MessageBubble({
   message,
   onFillCompliance,
   onEditCompliance
@@ -151,6 +151,7 @@ function MessageBubble({
   const [submitted, setSubmitted] = useState(false);
   const isInfoRequired = message.role === 'assistant' && message.content.includes('[INFO_REQUIRED]') && !submitted;
   const cleanContent = message.content.replace('[INFO_REQUIRED]', '').trim();
+  const formattedHtml = useMemo(() => formatMarkdown(cleanContent), [cleanContent]);
 
   // Local state for interactive compliance items
   const [items, setItems] = useState<any[]>((message as any).complianceItems || []);
@@ -367,7 +368,7 @@ function MessageBubble({
               className={`prose-chat text-[13px] leading-[1.75] text-[#C8C3B8] ${message.isStreaming ? 'typing-cursor' : ''
                 }`}
               dangerouslySetInnerHTML={{
-                __html: formatMarkdown(cleanContent),
+                __html: formattedHtml,
               }}
             />
           )}
@@ -639,7 +640,7 @@ function MessageBubble({
       </div>
     </motion.div>
   );
-}
+});
 
 // Empty State 
 function EmptyState({ mode }: { mode: ChatMode }) {
@@ -722,12 +723,27 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     (s) => s.chat
   );
 
+  const [localInput, setLocalInput] = useState(inputValue);
+
+  // Keep localInput in sync when inputValue changes externally (quick prompts, voice modal, searchParams)
+  useEffect(() => {
+    setLocalInput(inputValue);
+  }, [inputValue]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [retryMessageId, setRetryMessageId] = useState<string | null>(null);
   const lastProcessedQueryRef = useRef<string | null>(null);
 
-  const [selectedModel, setSelectedModel] = useState(mode === 'compliance' ? 'gpt-4o' : 'gemini-2.0-flash');
+  const [selectedModel, setSelectedModel] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('lexai_selected_model');
+      if (saved && MODELS.some((m) => m.id === saved)) {
+        return saved;
+      }
+    }
+    return mode === 'compliance' ? 'gpt-4o' : 'gemini-2.0-flash';
+  });
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -911,10 +927,15 @@ function ChatContent({ mode }: { mode: ChatMode }) {
   // Sync page mode and load/clear conversation history based on active route
   useEffect(() => {
     dispatch(setActiveMode(mode));
-    if (mode === 'compliance') {
-      setSelectedModel('gpt-4o');
-    } else {
-      setSelectedModel('gemini-2.0-flash');
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('lexai_selected_model');
+      if (saved && MODELS.some((m) => m.id === saved)) {
+        setSelectedModel(saved);
+      } else if (mode === 'compliance') {
+        setSelectedModel('gpt-4o');
+      } else {
+        setSelectedModel('gemini-2.0-flash');
+      }
     }
 
     const urlReportId = urlReportIdStr || null;
@@ -1064,9 +1085,9 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Auto-resize textarea
+  // Auto-resize textarea & update local state without Redux re-renders
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    dispatch(setInputValue(e.target.value));
+    setLocalInput(e.target.value);
     e.target.style.height = 'auto';
     e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
   };
@@ -1075,7 +1096,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
   // Send message with simulated streaming
   const sendMessage = useCallback(async (overrideContent?: string, overrideComplianceData?: any) => {
-    const content = (overrideContent !== undefined ? overrideContent : inputValue).trim();
+    const content = (overrideContent !== undefined ? overrideContent : localInput).trim();
     if (!content && mode !== 'compliance') return;
     if (isStreaming) return;
 
@@ -1083,6 +1104,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     if (isAtLimit) return;
 
     // Clear input
+    setLocalInput('');
     dispatch(setInputValue(''));
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -1239,12 +1261,12 @@ function ChatContent({ mode }: { mode: ChatMode }) {
             })
           );
         } else {
-          // Smooth chunked streaming for new responses (4 words per tick)
+          // Fast chunked streaming for new responses (8 words per tick)
           const words = responseText.split(' ');
-          const chunkSize = 4;
+          const chunkSize = 8;
           for (let i = 0; i < words.length; i += chunkSize) {
             const chunk = words.slice(i, i + chunkSize).join(' ');
-            await new Promise((r) => setTimeout(r, 10));
+            await new Promise((r) => setTimeout(r, 8));
             dispatch(
               appendToMessage({
                 id: assistantMsgId,
@@ -1357,7 +1379,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
       }
     }
   }, [
-    inputValue,
+    localInput,
     isStreaming,
     isAtLimit,
     mode,
@@ -1388,7 +1410,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
     }
   };
 
-  const canSend = inputValue.trim().length >= 2 && !isStreaming && !isAtLimit;
+  const canSend = localInput.trim().length >= 2 && !isStreaming && !isAtLimit;
 
   return (
     <div className="flex h-full flex-col">
@@ -1646,6 +1668,9 @@ function ChatContent({ mode }: { mode: ChatMode }) {
                           type="button"
                           onClick={() => {
                             setSelectedModel(model.id);
+                            if (typeof window !== 'undefined') {
+                              localStorage.setItem('lexai_selected_model', model.id);
+                            }
                             setModelDropdownOpen(false);
                           }}
                           className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[12px] transition-colors ${isSelected
@@ -1668,7 +1693,7 @@ function ChatContent({ mode }: { mode: ChatMode }) {
 
             <textarea
               ref={textareaRef}
-              value={inputValue}
+              value={localInput}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder={
